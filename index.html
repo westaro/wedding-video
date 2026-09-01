@@ -122,8 +122,15 @@
     <button id="sendBtn" class="btn-send" onclick="uploadVideo()" style="display: none;">新郎新婦へ送信</button>
   </div>
 
+  <!-- 非表示の通信用フレーム・フォーム -->
+  <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+  <form id="uploadForm" method="POST" target="hidden_iframe" style="display:none;">
+    <input type="hidden" name="fileData" id="formFileData">
+    <input type="hidden" name="mimeType" id="formMimeType">
+    <input type="hidden" name="fileName" id="formFileName">
+  </form>
+
   <script>
-    // ▼ 作成したGASのウェブアプリURLを入力 ▼
     const UPLOAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
     const MAX_RECORD_SECONDS = 30;
 
@@ -146,11 +153,10 @@
     let countdownLeft = MAX_RECORD_SECONDS;
     let recordedBlob = null;
 
-    // 1. カメラ起動
     async function startCamera() {
       try {
         userStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
           audio: true
         });
         cameraVideo.srcObject = userStream;
@@ -161,7 +167,6 @@
       }
     }
 
-    // 2. 録画制御
     function toggleRecording() {
       if (!isRecording) startRecording();
       else stopRecording();
@@ -171,10 +176,10 @@
       recordedChunks = [];
       const mimeType = getSupportedMimeType();
       
-      mediaRecorder = new MediaRecorder(userStream, {
-        mimeType: mimeType,
-        videoBitsPerSecond: 2500000 // 画質と容量のバランス最適化
-      });
+      const options = { videoBitsPerSecond: 600000 }; // 軽量化（約600kbps）
+      if (mimeType) options.mimeType = mimeType;
+
+      mediaRecorder = new MediaRecorder(userStream, options);
 
       mediaRecorder.ondataavailable = e => {
         if (e.data && e.data.size > 0) recordedChunks.push(e.data);
@@ -218,7 +223,7 @@
     }
 
     function getSupportedMimeType() {
-      const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+      const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
       for (const type of types) {
         if (MediaRecorder.isTypeSupported(type)) return type;
       }
@@ -236,7 +241,6 @@
       recBtn.disabled = false;
     }
 
-    // 3. ドライブへの送信処理
     async function uploadVideo() {
       if (!recordedBlob) return;
 
@@ -250,23 +254,22 @@
         const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
         const fileName = `wedding_msg_${Date.now()}.${ext}`;
 
-        // GASへPOSTリクエストを送信
-        await fetch(UPLOAD_ENDPOINT, {
-          method: 'POST',
-          mode: 'no-cors', // クロスドメイン制限を回避
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({
-            fileData: base64Data,
-            mimeType: mimeType,
-            fileName: fileName
-          })
-        });
+        const form = document.getElementById('uploadForm');
+        form.action = UPLOAD_ENDPOINT;
+        document.getElementById('formFileData').value = base64Data;
+        document.getElementById('formMimeType').value = mimeType;
+        document.getElementById('formFileName').value = fileName;
 
-        // 成功画面表示
-        showThanksScreen();
+        // フォームを送信
+        form.submit();
+
+        // 3秒後に完了画面に切り替え
+        setTimeout(() => {
+          showThanksScreen();
+        }, 3000);
 
       } catch (err) {
-        alert('送信に失敗しました。通信環境をご確認のうえ再試行してください。');
+        alert('送信に失敗しました。');
         sendBtn.disabled = false;
         retakeBtn.disabled = false;
         sendBtn.innerText = '新郎新婦へ送信';
