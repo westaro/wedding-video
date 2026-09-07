@@ -16,23 +16,26 @@
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 9:16の縦型表示用のコンテナ設定 */
+    /* 画面枠は9:16比率で固定 */
     .video-container {
       width: 100%;
-      max-width: 300px; /* スマホ画面に収まりやすい幅 */
+      max-width: 320px; /* スマホ画面で収まりやすい幅 */
       margin: 0 auto;
-      aspect-ratio: 9 / 16; /* 9:16の比率を固定 */
+      aspect-ratio: 9 / 16; /* 9:16の枠線 */
       border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* 枠いっぱいに縦型表示 */
+      /* object-fit: contain に変更し、カメラ映像をトリミング（アップ）させず全体を表示 */
+      object-fit: contain; 
     }
 
     .controls { margin-top: 20px; }
@@ -56,7 +59,7 @@
   <h2>Happy Wedding!</h2>
   <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
-  <!-- 9:16枠のコンテナ -->
+  <!-- 9:16の枠 -->
   <div class="video-container">
     <video id="preview" autoplay muted playsinline></video>
   </div>
@@ -82,15 +85,11 @@
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
 
-    // カメラの初期化（顔のアップを避けるためデフォルト設定を使用、9:16比率は維持）
+    // カメラの初期化（一番最初のシンプルな設定に戻し、広角で全体を取得）
     async function initCamera() {
       try {
-        // 顔のアップを解消するため、明示的な解像度指定を削除。アスペクト比のみ指定。
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: "user",
-            aspectRatio: { ideal: 9 / 16 } // 9:16比率は維持
-          }, 
+          video: { facingMode: "user" }, // 倍率変更やクロップを行わない一番最初の標準設定
           audio: true 
         });
         preview.srcObject = stream;
