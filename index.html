@@ -123,7 +123,6 @@
   </div>
 
   <script>
-    // ※↓GASを新バージョンでデプロイした際、URLが変わった場合はここを更新してください
     const UPLOAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
     const MAX_RECORD_SECONDS = 30;
 
@@ -169,7 +168,7 @@
       recordedChunks = [];
       const mimeType = getSupportedMimeType();
       
-      const options = { videoBitsPerSecond: 600000 }; // 軽量化（約600kbps）
+      const options = { videoBitsPerSecond: 600000 };
       if (mimeType) options.mimeType = mimeType;
 
       mediaRecorder = new MediaRecorder(userStream, options);
@@ -234,7 +233,6 @@
       recBtn.disabled = false;
     }
 
-    // ★書き換えた新しい送信関数★
     async function uploadVideo() {
       if (!recordedBlob) return;
 
@@ -262,15 +260,26 @@
           body: JSON.stringify(payload)
         });
 
-        if (response.ok) {
-          showThanksScreen();
-        } else {
-          throw new Error('サーバーエラーが発生しました');
+        const resultText = await response.text();
+        
+        try {
+          const result = JSON.parse(resultText);
+          if (result.status === "SUCCESS") {
+            showThanksScreen();
+          } else {
+            throw new Error(result.message || "GAS内部でエラーが発生しました");
+          }
+        } catch (parseError) {
+          if (response.ok) {
+            showThanksScreen();
+          } else {
+            throw new Error("サーバーとの通信に失敗しました");
+          }
         }
 
       } catch (err) {
         console.error(err);
-        alert('送信に失敗しました。電波の良いところで再度お試しください。');
+        alert('送信エラー: ' + err.message);
         sendBtn.disabled = false;
         retakeBtn.disabled = false;
         sendBtn.innerText = '新郎新婦へ送信';
