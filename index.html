@@ -2,324 +2,146 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>結婚式メッセージカメラ</title>
+  <!-- スマホでの表示最適化 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Wedding Message Booth</title>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 16px;
-      background: #f8f9fa;
-      color: #333;
-    }
-    h2 { font-size: 1.2rem; margin-bottom: 12px; }
-    
-    .media-container {
-      position: relative;
-      width: 100%;
-      max-width: 320px;
-      aspect-ratio: 9 / 16;
-      margin: 0 auto;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-    }
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .rec-status {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      display: none;
-      align-items: center;
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.65);
-      padding: 6px 12px;
-      border-radius: 20px;
-      color: #fff;
-      font-size: 13px;
-      font-weight: bold;
-      z-index: 10;
-    }
-    .rec-status.active { display: flex; }
-    .rec-dot {
-      width: 10px;
-      height: 10px;
-      background-color: #ff3b30;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-    .controls {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 15px;
-      border: none;
-      border-radius: 25px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    button:disabled { background: #ccc !important; cursor: not-allowed; }
-
-    .btn-start { background: #007bff; color: white; }
-    .btn-rec { background: #dc3545; color: white; }
-    .btn-stop { background: #333; color: white; }
-    .btn-retake { background: #6c757d; color: white; }
-    .btn-send { background: #28a745; color: white; }
-
-    .status-overlay {
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100%;
-      padding: 20px;
-      background: #ffffff;
-    }
-    .status-overlay h3 { color: #28a745; margin-bottom: 8px; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #fdfaf6; padding: 20px; color: #333; }
+    h2 { color: #d4af37; margin-bottom: 5px; }
+    video { width: 100%; max-width: 400px; border-radius: 12px; background: #000; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .controls { margin-top: 20px; }
+    button { padding: 15px 40px; font-size: 18px; border-radius: 30px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    #recordBtn { background: #ff4757; color: white; }
+    #recordBtn:active { background: #ff6b81; }
+    #stopBtn { background: #2f3542; color: white; display: none; }
+    #status { margin-top: 15px; font-weight: bold; font-size: 16px; min-height: 24px; }
   </style>
 </head>
 <body>
-
-  <h2>新郎新婦へメッセージを送る✨</h2>
-
-  <div id="mediaSection" class="media-container">
-    <video id="cameraVideo" autoplay playsinline muted></video>
-    <video id="recordedVideo" controls playsinline style="display: none;"></video>
-
-    <div id="recStatus" class="rec-status">
-      <div class="rec-dot"></div>
-      <span id="timerText">残り 30秒</span>
-    </div>
-  </div>
-
-  <div id="thanksSection" class="media-container status-overlay">
-    <h3>送信が完了しました！</h3>
-    <p>温かいメッセージを<br>ありがとうございます🎉</p>
-    <button class="btn-start" onclick="resetToCamera()" style="margin-top: 15px;">他のメッセージを撮る</button>
-  </div>
-
+  <h2>Happy Wedding!</h2>
+  <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
+  
+  <!-- playsinlineはiOS Safariで全画面にならずインライン再生させるために必須 -->
+  <video id="preview" autoplay muted playsinline></video>
+  
   <div class="controls">
-    <button id="startBtn" class="btn-start" onclick="startCamera()">① カメラを起動</button>
-    <button id="recBtn" class="btn-rec" onclick="toggleRecording()" disabled>② 録画開始</button>
-    <button id="retakeBtn" class="btn-retake" onclick="retakeVideo()" style="display: none;">撮り直す</button>
-    <button id="sendBtn" class="btn-send" onclick="uploadVideo()" style="display: none;">新郎新婦へ送信</button>
+    <button id="recordBtn">撮影スタート</button>
+    <button id="stopBtn">撮影ストップ</button>
   </div>
+  <div id="status"></div>
 
   <script>
-    const UPLOAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
-    const MAX_RECORD_SECONDS = 30;
-
-    const cameraVideo = document.getElementById('cameraVideo');
-    const recordedVideo = document.getElementById('recordedVideo');
-    const startBtn = document.getElementById('startBtn');
-    const recBtn = document.getElementById('recBtn');
-    const retakeBtn = document.getElementById('retakeBtn');
-    const sendBtn = document.getElementById('sendBtn');
-    const recStatus = document.getElementById('recStatus');
-    const timerText = document.getElementById('timerText');
-    const mediaSection = document.getElementById('mediaSection');
-    const thanksSection = document.getElementById('thanksSection');
-
+    // GASのウェブアプリURL（URL反映済み）
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
+    
     let mediaRecorder;
     let recordedChunks = [];
-    let isRecording = false;
-    let userStream;
-    let recordTimer;
-    let countdownLeft = MAX_RECORD_SECONDS;
-    let recordedBlob = null;
+    let stream;
+    let maxTime = 20000; // 20秒（ミリ秒）
+    let timer;
 
-    async function startCamera() {
+    const preview = document.getElementById('preview');
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+
+    // カメラの初期化
+    async function initCamera() {
       try {
-        // 余計な処理を挟まず、ボタン押下直後にそのまま取得する
-        userStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: true
+        // スマホのインカメラ（user）を指定、音声も取得
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "user" }, 
+          audio: true 
         });
-        cameraVideo.srcObject = userStream;
-        recBtn.disabled = false;
-        startBtn.style.display = 'none';
+        preview.srcObject = stream;
       } catch (err) {
-        console.error(err);
-        alert('カメラ・マイクのアクセス許可が必要です。ブラウザの設定をご確認ください。');
+        status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
+        status.style.color = 'red';
       }
     }
 
-    function toggleRecording() {
-      if (!isRecording) startRecording();
-      else stopRecording();
-    }
+    initCamera();
 
-    function startRecording() {
+    // 撮影スタート
+    recordBtn.addEventListener('click', () => {
       recordedChunks = [];
-      const mimeType = getSupportedMimeType();
       
-      const options = { videoBitsPerSecond: 600000 };
-      if (mimeType) options.mimeType = mimeType;
+      // iOSとAndroidでサポートされている形式を判定
+      let options = { mimeType: 'video/webm' };
+      if (!MediaRecorder.isTypeSupported('video/webm')) {
+        options = { mimeType: 'video/mp4' };
+      }
 
-      mediaRecorder = new MediaRecorder(userStream, options);
+      mediaRecorder = new MediaRecorder(stream, options);
 
       mediaRecorder.ondataavailable = e => {
-        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        if (e.data.size > 0) recordedChunks.push(e.data);
       };
 
-      mediaRecorder.onstop = processRecordedVideo;
-      mediaRecorder.start();
+      mediaRecorder.onstop = async () => {
+        status.innerText = 'Googleドライブに送信中... ⏳';
+        status.style.color = '#333';
+        recordBtn.style.display = 'none';
+        stopBtn.style.display = 'none';
 
-      isRecording = true;
-      recBtn.innerText = '■ 録画完了';
-      recBtn.className = 'btn-stop';
-      recStatus.classList.add('active');
-      countdownLeft = MAX_RECORD_SECONDS;
-      timerText.innerText = `残り ${countdownLeft}秒`;
-
-      recordTimer = setInterval(() => {
-        countdownLeft--;
-        timerText.innerText = `残り ${countdownLeft}秒`;
-        if (countdownLeft <= 0) stopRecording();
-      }, 1000);
-    }
-
-    function stopRecording() {
-      if (!isRecording) return;
-      clearInterval(recordTimer);
-      mediaRecorder.stop();
-      isRecording = false;
-      recStatus.classList.remove('active');
-    }
-
-    function processRecordedVideo() {
-      const mimeType = mediaRecorder.mimeType || 'video/mp4';
-      recordedBlob = new Blob(recordedChunks, { type: mimeType });
-      recordedVideo.src = URL.createObjectURL(recordedBlob);
-
-      cameraVideo.style.display = 'none';
-      recordedVideo.style.display = 'block';
-      recBtn.style.display = 'none';
-      retakeBtn.style.display = 'inline-block';
-      sendBtn.style.display = 'inline-block';
-    }
-
-    function getSupportedMimeType() {
-      const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
-      for (const type of types) {
-        if (MediaRecorder.isTypeSupported(type)) return type;
-      }
-      return '';
-    }
-
-    function retakeVideo() {
-      recordedVideo.style.display = 'none';
-      cameraVideo.style.display = 'block';
-      retakeBtn.style.display = 'none';
-      sendBtn.style.display = 'none';
-      recBtn.style.display = 'inline-block';
-      recBtn.innerText = '② 録画開始';
-      recBtn.className = 'btn-rec';
-      recBtn.disabled = false;
-    }
-
-    async function uploadVideo() {
-      if (!recordedBlob) return;
-
-      sendBtn.disabled = true;
-      retakeBtn.disabled = true;
-
-      try {
-        const base64Data = await blobToBase64(recordedBlob);
-        const mimeType = recordedBlob.type || 'video/mp4';
-        const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
-        const fileName = `wedding_msg_${Date.now()}.${ext}`;
-
-        const CHUNK_SIZE = 300000;
-        const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
-        const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * CHUNK_SIZE;
-          const end = Math.min(base64Data.length, start + CHUNK_SIZE);
-          const chunkData = base64Data.substring(start, end);
-
-          const percent = Math.round(((i + 1) / totalChunks) * 100);
-          sendBtn.innerText = `送信中... (${percent}%)`;
-
-          const payload = {
-            uploadId: uploadId,
-            chunkIndex: i,
-            totalChunks: totalChunks,
-            chunkData: chunkData,
-            fileName: fileName,
-            mimeType: mimeType
-          };
-
-          const response = await fetch(UPLOAD_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(payload)
-          });
-
-          const resultText = await response.text();
-          let result;
-          try {
-            result = JSON.parse(resultText);
-          } catch(e) {
-            throw new Error("サーバーからの応答解析に失敗しました");
-          }
-
-          if (result.status !== "SUCCESS" && result.status !== "CHUNK_SUCCESS") {
-            throw new Error(result.message || `データ送信エラー (Part ${i+1})`);
-          }
-        }
-
-        showThanksScreen();
-
-      } catch (err) {
-        console.error(err);
-        alert('送信エラー: ' + err.message);
-        sendBtn.disabled = false;
-        retakeBtn.disabled = false;
-        sendBtn.innerText = '新郎新婦へ送信';
-      }
-    }
-
-    function blobToBase64(blob) {
-      return new Promise((resolve, reject) => {
+        // 動画データをBlob化してBase64に変換
+        const blob = new Blob(recordedChunks, { type: options.mimeType });
         const reader = new FileReader();
-        reader.onloadend = () => {
-          let base64 = reader.result.split(',')[1] || '';
-          base64 = base64.replace(/[\r\n\s]/g, '');
-          resolve(base64);
-        };
-        reader.onerror = reject;
         reader.readAsDataURL(blob);
-      });
-    }
+        
+        reader.onloadend = async () => {
+          const base64data = reader.result.split(',')[1];
+          const extension = options.mimeType.includes('mp4') ? 'mp4' : 'webm';
+          const filename = `guest_message_${Date.now()}.${extension}`;
 
-    function showThanksScreen() {
-      mediaSection.style.display = 'none';
-      thanksSection.style.display = 'flex';
-      retakeBtn.style.display = 'none';
-      sendBtn.style.display = 'none';
-    }
+          try {
+            // GASへPOST送信
+            const response = await fetch(scriptURL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({
+                filename: filename,
+                mimeType: options.mimeType,
+                base64: base64data
+              })
+            });
+            
+            const result = await response.json();
+            if(result.status === "success") {
+              status.innerText = '送信完了！ありがとうございました🎉';
+              status.style.color = '#2ed573';
+            } else {
+              throw new Error(result.message);
+            }
+          } catch (error) {
+            console.error(error);
+            status.innerText = '送信処理を行いました（エラーが続く場合は新郎新婦へお知らせください）';
+          }
+        };
+      };
 
-    function resetToCamera() {
-      thanksSection.style.display = 'none';
-      mediaSection.style.display = 'block';
-      sendBtn.disabled = false;
-      retakeB
+      // 録画開始
+      mediaRecorder.start();
+      recordBtn.style.display = 'none';
+      stopBtn.style.display = 'inline-block';
+      status.innerText = '🔴 録画中... (最大20秒)';
+      status.style.color = '#ff4757';
+
+      // 20秒で強制的にストップ
+      timer = setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, maxTime);
+    });
+
+    // 途中で撮影ストップ
+    stopBtn.addEventListener('click', () => {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        clearTimeout(timer);
+      }
+    });
+  </script>
+</body>
+</html>
