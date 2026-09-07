@@ -16,12 +16,12 @@
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 9:16 の枠設定 */
+    /* 9:16 の縦長枠 */
     .video-container {
       width: 100%;
-      max-width: 290px; /* 画面上の圧迫感を抑え、引きの印象を保つサイズ */
+      max-width: 280px; /* 画面上の圧迫感を抑え、より広く映るように調整 */
       margin: 0 auto;
-      aspect-ratio: 9 / 16; /* 9:16の比率 */
+      aspect-ratio: 9 / 16;
       border-radius: 20px;
       overflow: hidden;
       background: #000;
@@ -32,7 +32,7 @@
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* 黒帯を絶対に出さず、9:16枠全体にぴったりフィット */
+      object-fit: cover; /* 黒帯を出さずに9:16枠全体に表示 */
     }
 
     /* 録画中のカウントダウンバッジ（右上） */
@@ -101,18 +101,30 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // カメラの初期化（端末から直接9:16の高解像度・広角ストリームを取得）
+    // カメラの初期化（広角画角の強制適用）
     async function initCamera() {
       try {
+        // フルHDの高解像度・広角映像を要求
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            aspectRatio: { ideal: 0.5625 }, // 9/16（0.5625）をカメラ側に直接要求
-            width: { ideal: 1080 },
-            height: { ideal: 1920 }
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
           }, 
           audio: true 
         });
+
+        // 端末がズーム機能をサポートしている場合、最小倍率（一番引き・広角の状態）に強制固定
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
+          const capabilities = videoTrack.getCapabilities();
+          if (capabilities.zoom) {
+            await videoTrack.applyConstraints({
+              advanced: [{ zoom: capabilities.zoom.min }]
+            });
+          }
+        }
+
         preview.srcObject = stream;
       } catch (err) {
         status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
