@@ -82,15 +82,14 @@
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
 
-    // カメラの初期化（9:16のアスペクト比を指定）
+    // カメラの初期化（顔のアップを避けるためデフォルト設定を使用、9:16比率は維持）
     async function initCamera() {
       try {
+        // 顔のアップを解消するため、明示的な解像度指定を削除。アスペクト比のみ指定。
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            aspectRatio: { ideal: 9 / 16 }, // 9:16比率を指定
-            width: { ideal: 720 },
-            height: { ideal: 1280 }
+            aspectRatio: { ideal: 9 / 16 } // 9:16比率は維持
           }, 
           audio: true 
         });
