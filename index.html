@@ -16,26 +16,39 @@
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 画面枠は9:16比率で固定 */
+    /* 9:16の枠設定 */
     .video-container {
       width: 100%;
-      max-width: 320px; /* スマホ画面で収まりやすい幅 */
+      max-width: 320px;
       margin: 0 auto;
-      aspect-ratio: 9 / 16; /* 9:16の枠線 */
+      aspect-ratio: 9 / 16;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative;
     }
     
     video {
       width: 100%;
       height: 100%;
-      /* object-fit: contain に変更し、カメラ映像をトリミング（アップ）させず全体を表示 */
-      object-fit: contain; 
+      object-fit: cover; /* 9:16枠全体に表示 */
+    }
+
+    /* 録画中のカウントダウンバッジ（右上） */
+    #timerBadge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 71, 87, 0.85);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+      display: none;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     .controls { margin-top: 20px; }
@@ -59,8 +72,9 @@
   <h2>Happy Wedding!</h2>
   <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
-  <!-- 9:16の枠 -->
   <div class="video-container">
+    <!-- 撮影中の残り秒数バッジ -->
+    <div id="timerBadge">残り 20秒</div>
     <video id="preview" autoplay muted playsinline></video>
   </div>
   
@@ -77,19 +91,27 @@
     let mediaRecorder;
     let recordedChunks = [];
     let stream;
-    let maxTime = 20000; // 20秒（ミリ秒）
+    let maxTime = 20; // 最大20秒
+    let timeLeft = maxTime;
     let timer;
+    let countdownInterval;
 
     const preview = document.getElementById('preview');
     const recordBtn = document.getElementById('recordBtn');
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
+    const timerBadge = document.getElementById('timerBadge');
 
-    // カメラの初期化（一番最初のシンプルな設定に戻し、広角で全体を取得）
+    // カメラの初期化（9:16）
     async function initCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user" }, // 倍率変更やクロップを行わない一番最初の標準設定
+          video: { 
+            facingMode: "user",
+            aspectRatio: { ideal: 0.5625 },
+            width: { ideal: 1080 },
+            height: { ideal: 1920 }
+          }, 
           audio: true 
         });
         preview.srcObject = stream;
@@ -105,7 +127,6 @@
     recordBtn.addEventListener('click', () => {
       recordedChunks = [];
       
-      // iOSとAndroidでサポートされている形式を判定
       let options = { mimeType: 'video/webm' };
       if (!MediaRecorder.isTypeSupported('video/webm')) {
         options = { mimeType: 'video/mp4' };
@@ -118,12 +139,16 @@
       };
 
       mediaRecorder.onstop = async () => {
+        // カウントダウン停止＆非表示
+        clearInterval(countdownInterval);
+        clearTimeout(timer);
+        timerBadge.style.display = 'none';
+
         status.innerText = 'Googleドライブに送信中... ⏳';
         status.style.color = '#333';
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
-        // 動画データをBlob化してBase64に変換
         const blob = new Blob(recordedChunks, { type: options.mimeType });
         const reader = new FileReader();
         reader.readAsDataURL(blob);
@@ -134,7 +159,6 @@
           const filename = `guest_message_${Date.now()}.${extension}`;
 
           try {
-            // GASへPOST送信
             const response = await fetch(scriptURL, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain' },
@@ -163,22 +187,35 @@
       mediaRecorder.start();
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
-      status.innerText = '🔴 録画中... (最大20秒)';
+
+      // カウントダウン初期化
+      timeLeft = maxTime;
+      timerBadge.innerText = `残り ${timeLeft}秒`;
+      timerBadge.style.display = 'block';
+      status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
       status.style.color = '#ff4757';
 
-      // 20秒で強制的にストップ
+      // 1秒ごとにカウントダウン更新
+      countdownInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft >= 0) {
+          timerBadge.innerText = `残り ${timeLeft}秒`;
+          status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
+        }
+      }, 1000);
+
+      // 20秒で自動停止
       timer = setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, maxTime);
+      }, maxTime * 1000);
     });
 
     // 途中で撮影ストップ
     stopBtn.addEventListener('click', () => {
       if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
-        clearTimeout(timer);
       }
     });
   </script>
