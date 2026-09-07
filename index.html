@@ -16,23 +16,23 @@
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 添付画像に合わせた 3:4 のカメラ枠設定 */
+    /* 9:16 の枠設定 */
     .video-container {
       width: 100%;
-      max-width: 340px; /* スマホ画面に収まる幅 */
+      max-width: 290px; /* 画面上の圧迫感を抑え、引きの印象を保つサイズ */
       margin: 0 auto;
-      aspect-ratio: 3 / 4; /* 添付画像の画面比率 */
-      border-radius: 20px; /* 画像のような角丸デザイン */
+      aspect-ratio: 9 / 16; /* 9:16の比率 */
+      border-radius: 20px;
       overflow: hidden;
       background: #000;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
     }
     
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* 3:4枠全体に綺麗にフィット */
+      object-fit: cover; /* 黒帯を絶対に出さず、9:16枠全体にぴったりフィット */
     }
 
     /* 録画中のカウントダウンバッジ（右上） */
@@ -73,7 +73,6 @@
   <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
   <div class="video-container">
-    <!-- 撮影中の残り秒数バッジ -->
     <div id="timerBadge">残り 20秒</div>
     <video id="preview" autoplay muted playsinline></video>
   </div>
@@ -102,13 +101,15 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // カメラの初期化（3:4の標準画角を取得）
+    // カメラの初期化（端末から直接9:16の高解像度・広角ストリームを取得）
     async function initCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            aspectRatio: { ideal: 0.75 } // 3/4比率（インカメラの自然な比率）
+            aspectRatio: { ideal: 0.5625 }, // 9/16（0.5625）をカメラ側に直接要求
+            width: { ideal: 1080 },
+            height: { ideal: 1920 }
           }, 
           audio: true 
         });
@@ -137,7 +138,6 @@
       };
 
       mediaRecorder.onstop = async () => {
-        // カウントダウン停止＆非表示
         clearInterval(countdownInterval);
         clearTimeout(timer);
         timerBadge.style.display = 'none';
@@ -181,19 +181,16 @@
         };
       };
 
-      // 録画開始
       mediaRecorder.start();
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
 
-      // カウントダウン初期化
       timeLeft = maxTime;
       timerBadge.innerText = `残り ${timeLeft}秒`;
       timerBadge.style.display = 'block';
       status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
       status.style.color = '#ff4757';
 
-      // 1秒ごとにカウントダウン更新
       countdownInterval = setInterval(() => {
         timeLeft--;
         if (timeLeft >= 0) {
@@ -202,7 +199,6 @@
         }
       }, 1000);
 
-      // 20秒で自動停止
       timer = setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
@@ -210,7 +206,6 @@
       }, maxTime * 1000);
     });
 
-    // 途中で撮影ストップ
     stopBtn.addEventListener('click', () => {
       if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
