@@ -122,15 +122,8 @@
     <button id="sendBtn" class="btn-send" onclick="uploadVideo()" style="display: none;">新郎新婦へ送信</button>
   </div>
 
-  <!-- 非表示の通信用フレーム・フォーム -->
-  <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
-  <form id="uploadForm" method="POST" target="hidden_iframe" style="display:none;">
-    <input type="hidden" name="fileData" id="formFileData">
-    <input type="hidden" name="mimeType" id="formMimeType">
-    <input type="hidden" name="fileName" id="formFileName">
-  </form>
-
   <script>
+    // ※↓GASを新バージョンでデプロイした際、URLが変わった場合はここを更新してください
     const UPLOAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
     const MAX_RECORD_SECONDS = 30;
 
@@ -241,12 +234,13 @@
       recBtn.disabled = false;
     }
 
+    // ★書き換えた新しい送信関数★
     async function uploadVideo() {
       if (!recordedBlob) return;
 
       sendBtn.disabled = true;
       retakeBtn.disabled = true;
-      sendBtn.innerText = '送信中...';
+      sendBtn.innerText = '送信中...（このままお待ちください）'; 
 
       try {
         const base64Data = await blobToBase64(recordedBlob);
@@ -254,22 +248,29 @@
         const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
         const fileName = `wedding_msg_${Date.now()}.${ext}`;
 
-        const form = document.getElementById('uploadForm');
-        form.action = UPLOAD_ENDPOINT;
-        document.getElementById('formFileData').value = base64Data;
-        document.getElementById('formMimeType').value = mimeType;
-        document.getElementById('formFileName').value = fileName;
+        const payload = {
+          fileData: base64Data,
+          mimeType: mimeType,
+          fileName: fileName
+        };
 
-        // フォームを送信
-        form.submit();
+        const response = await fetch(UPLOAD_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain', 
+          },
+          body: JSON.stringify(payload)
+        });
 
-        // 3秒後に完了画面に切り替え
-        setTimeout(() => {
+        if (response.ok) {
           showThanksScreen();
-        }, 3000);
+        } else {
+          throw new Error('サーバーエラーが発生しました');
+        }
 
       } catch (err) {
-        alert('送信に失敗しました。');
+        console.error(err);
+        alert('送信に失敗しました。電波の良いところで再度お試しください。');
         sendBtn.disabled = false;
         retakeBtn.disabled = false;
         sendBtn.innerText = '新郎新婦へ送信';
