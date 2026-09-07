@@ -168,7 +168,7 @@
       recordedChunks = [];
       const mimeType = getSupportedMimeType();
       
-      const options = { videoBitsPerSecond: 500000 };
+      const options = { videoBitsPerSecond: 600000 };
       if (mimeType) options.mimeType = mimeType;
 
       mediaRecorder = new MediaRecorder(userStream, options);
@@ -233,12 +233,12 @@
       recBtn.disabled = false;
     }
 
+    // ★分割送信（チャンクアップロード）を実装した送信関数★
     async function uploadVideo() {
       if (!recordedBlob) return;
 
       sendBtn.disabled = true;
       retakeBtn.disabled = true;
-      sendBtn.innerText = '送信中...（このままお待ちください）'; 
 
       try {
         const base64Data = await blobToBase64(recordedBlob);
@@ -246,36 +246,50 @@
         const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
         const fileName = `wedding_msg_${Date.now()}.${ext}`;
 
-        const payload = {
-          fileData: base64Data,
-          mimeType: mimeType,
-          fileName: fileName
-        };
+        // 1回の送信サイズを30万文字（約300KB）に分割
+        const CHUNK_SIZE = 300000;
+        const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
+        const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
-        const response = await fetch(UPLOAD_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain', 
-          },
-          body: JSON.stringify(payload)
-        });
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(base64Data.length, start + CHUNK_SIZE);
+          const chunkData = base64Data.substring(start, end);
 
-        const resultText = await response.text();
-        
-        try {
-          const result = JSON.parse(resultText);
-          if (result.status === "SUCCESS") {
-            showThanksScreen();
-          } else {
-            throw new Error(result.message || "GAS内部でエラーが発生しました");
+          // 送信進捗率（%）をボタンに表示
+          const percent = Math.round(((i + 1) / totalChunks) * 100);
+          sendBtn.innerText = `送信中... (${percent}%)`;
+
+          const payload = {
+            uploadId: uploadId,
+            chunkIndex: i,
+            totalChunks: totalChunks,
+            chunkData: chunkData,
+            fileName: fileName,
+            mimeType: mimeType
+          };
+
+          const response = await fetch(UPLOAD_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          });
+
+          const resultText = await response.text();
+          let result;
+          try {
+            result = JSON.parse(resultText);
+          } catch(e) {
+            throw new Error("サーバーからの応答解析に失敗しました");
           }
-        } catch (parseError) {
-          if (response.ok) {
-            showThanksScreen();
-          } else {
-            throw new Error("サーバーとの通信に失敗しました");
+
+          if (result.status !== "SUCCESS" && result.status !== "CHUNK_SUCCESS") {
+            throw new Error(result.message || `データ送信エラー (Part ${i+1})`);
           }
         }
+
+        // 全チャンク送信完了
+        showThanksScreen();
 
       } catch (err) {
         console.error(err);
@@ -289,7 +303,11 @@
     function blobToBase64(blob) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
+        reader.onloadend = () => {
+          let base64 = reader.result.split(',')[1] || '';
+          base64 = base64.replace(/[\r\n\s]/g, '');
+          resolve(base64);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
@@ -303,13 +321,4 @@
     }
 
     function resetToCamera() {
-      thanksSection.style.display = 'none';
-      mediaSection.style.display = 'block';
-      sendBtn.disabled = false;
-      retakeBtn.disabled = false;
-      sendBtn.innerText = '新郎新婦へ送信';
-      retakeVideo();
-    }
-  </script>
-</body>
-</html>
+      thanksSection.style.display =
