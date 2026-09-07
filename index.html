@@ -6,23 +6,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Wedding Message Booth</title>
   <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #fdfaf6; padding: 20px; color: #333; }
-    h2 { color: #d4af37; margin-bottom: 5px; }
-    video { width: 100%; max-width: 400px; border-radius: 12px; background: #000; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    body { 
+      font-family: 'Helvetica Neue', Arial, sans-serif; 
+      text-align: center; 
+      background: #fdfaf6; 
+      padding: 15px; 
+      color: #333; 
+    }
+    h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
+    p { margin-bottom: 15px; font-size: 14px; }
+    
+    /* 9:16の縦型表示用のコンテナ設定 */
+    .video-container {
+      width: 100%;
+      max-width: 300px; /* スマホ画面に収まりやすい幅 */
+      margin: 0 auto;
+      aspect-ratio: 9 / 16; /* 9:16の比率を固定 */
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      position: relative;
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* 枠いっぱいに縦型表示 */
+    }
+
     .controls { margin-top: 20px; }
-    button { padding: 15px 40px; font-size: 18px; border-radius: 30px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    button { 
+      padding: 15px 40px; 
+      font-size: 18px; 
+      border-radius: 30px; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: 0.3s; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
     #recordBtn { background: #ff4757; color: white; }
     #recordBtn:active { background: #ff6b81; }
     #stopBtn { background: #2f3542; color: white; display: none; }
-    #status { margin-top: 15px; font-weight: bold; font-size: 16px; min-height: 24px; }
+    #status { margin-top: 15px; font-weight: bold; font-size: 15px; min-height: 24px; }
   </style>
 </head>
 <body>
   <h2>Happy Wedding!</h2>
   <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
-  <!-- playsinlineはiOS Safariで全画面にならずインライン再生させるために必須 -->
-  <video id="preview" autoplay muted playsinline></video>
+  <!-- 9:16枠のコンテナ -->
+  <div class="video-container">
+    <video id="preview" autoplay muted playsinline></video>
+  </div>
   
   <div class="controls">
     <button id="recordBtn">撮影スタート</button>
@@ -31,7 +68,7 @@
   <div id="status"></div>
 
   <script>
-    // GASのウェブアプリURL（URL反映済み）
+    // GASのウェブアプリURL
     const scriptURL = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
     
     let mediaRecorder;
@@ -45,12 +82,16 @@
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
 
-    // カメラの初期化
+    // カメラの初期化（9:16のアスペクト比を指定）
     async function initCamera() {
       try {
-        // スマホのインカメラ（user）を指定、音声も取得
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user" }, 
+          video: { 
+            facingMode: "user",
+            aspectRatio: { ideal: 9 / 16 }, // 9:16比率を指定
+            width: { ideal: 720 },
+            height: { ideal: 1280 }
+          }, 
           audio: true 
         });
         preview.srcObject = stream;
