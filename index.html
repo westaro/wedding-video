@@ -168,7 +168,7 @@
       recordedChunks = [];
       const mimeType = getSupportedMimeType();
       
-      const options = { videoBitsPerSecond: 600000 };
+      const options = { videoBitsPerSecond: 500000 };
       if (mimeType) options.mimeType = mimeType;
 
       mediaRecorder = new MediaRecorder(userStream, options);
