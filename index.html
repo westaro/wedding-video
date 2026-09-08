@@ -99,23 +99,24 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // iPhone級の高画質 4:3 (1920x1440) 固定描画キャンバス
+    // 高精細かつ処理が軽い4:3（1440x1080）描画用キャンバス
     const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1440;
-    const ctx = canvas.getContext('2d');
+    canvas.width = 1440;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d', { alpha: false }); // alpha: false で描画パフォーマンスを強化
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     async function initCamera() {
       try {
-        // iPhoneのカメラが持つ高解像度（4:3）映像を優先リクエスト
+        // 高フレームレート（最大60fps）と高解像度を優先要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 2560, min: 1920 },
-            height: { ideal: 1920, min: 1440 },
-            frameRate: { ideal: 30 }
+            aspectRatio: { ideal: 1.3333333333 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1440, min: 960 },
+            frameRate: { ideal: 60, min: 30 }
           }, 
           audio: true 
         });
@@ -132,7 +133,7 @@
 
         preview.srcObject = cameraStream;
 
-        // 4:3 高解像度キャンバスへリアルタイム描画
+        // 4:3 リアルタイムクロップ描画（コマ落ち防止の高速レンダリング）
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
             const vW = preview.videoWidth;
@@ -174,14 +175,14 @@
         mimeType = 'video/mp4';
       }
 
-      // 1920x1440 (4:3) キャンバスからストリームを生成
-      const canvasStream = canvas.captureStream(30);
+      // 60fps でキャンバスからストリームを出力（滑らかな動きを実現）
+      const canvasStream = canvas.captureStream(60);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // GASの10MB送信制限内で限界まで画質を高めるビットレート（3.0Mbps）
+      // GAS送信の10MB上限内で高解像度・滑らかさを保つビットレート（3.0Mbps）
       const options = {
         mimeType: mimeType,
         videoBitsPerSecond: 3000000 
