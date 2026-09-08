@@ -99,24 +99,34 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // 高精細かつ処理が軽い4:3（1440x1080）描画用キャンバス
+    // クッキリ描画用の動的キャンバス
     const canvas = document.createElement('canvas');
-    canvas.width = 1440;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d', { alpha: false }); // alpha: false で描画パフォーマンスを強化
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    // 端末がサポートする最もくっきり映るコーデックを検出
+    function getSupportedMimeType() {
+      const types = [
+        'video/mp4;codecs=avc1.640028',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+      ];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      }
+      return '';
+    }
 
     async function initCamera() {
       try {
-        // 高フレームレート（最大60fps）と高解像度を優先要求
+        // カメラの最高画質入力をリクエスト
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            aspectRatio: { ideal: 1.3333333333 },
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1440, min: 960 },
-            frameRate: { ideal: 60, min: 30 }
+            width: { ideal: 2560, min: 1280 },
+            height: { ideal: 1920, min: 960 },
+            frameRate: { ideal: 30 }
           }, 
           audio: true 
         });
@@ -133,9 +143,33 @@
 
         preview.srcObject = cameraStream;
 
-        // 4:3 リアルタイムクロップ描画（コマ落ち防止の高速レンダリング）
+        // 映像の読み込み完了時、カメラのネイティブ解像度に合わせてキャンバスを拡大縮小なしでフィット設定
+        preview.onloadedmetadata = () => {
+          updateCanvasSize();
+        };
+
+        function updateCanvasSize() {
+          const vW = preview.videoWidth || 1280;
+          const vH = preview.videoHeight || 960;
+          const targetAspect = 4 / 3;
+
+          if (vW / vH > targetAspect) {
+            canvas.height = vH;
+            canvas.width = Math.round(vH * targetAspect);
+          } else {
+            canvas.width = vW;
+            canvas.height = Math.round(vW / targetAspect);
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+        }
+
+        // 4:3 リアルタイム高精細クロップ描画
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
+            if (canvas.width === 0) updateCanvasSize();
+
             const vW = preview.videoWidth;
             const vH = preview.videoHeight;
             const targetAspect = 4 / 3;
@@ -170,23 +204,22 @@
     recordBtn.addEventListener('click', () => {
       recordedChunks = [];
       
-      let mimeType = 'video/webm';
-      if (!MediaRecorder.isTypeSupported('video/webm')) {
-        mimeType = 'video/mp4';
-      }
+      const mimeType = getSupportedMimeType();
 
-      // 60fps でキャンバスからストリームを出力（滑らかな動きを実現）
-      const canvasStream = canvas.captureStream(60);
+      // 30fpsでキャプチャ（1コマあたりの画質と輪郭のくっきり感を最大化）
+      const canvasStream = canvas.captureStream(30);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // GAS送信の10MB上限内で高解像度・滑らかさを保つビットレート（3.0Mbps）
+      // GAS送信上限（10MB）ギリギリの高ビットレート（3.2Mbps）
       const options = {
-        mimeType: mimeType,
-        videoBitsPerSecond: 3000000 
+        videoBitsPerSecond: 3200000 
       };
+      if (mimeType) {
+        options.mimeType = mimeType;
+      }
 
       mediaRecorder = new MediaRecorder(canvasStream, options);
 
@@ -204,13 +237,14 @@
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
-        const blob = new Blob(recordedChunks, { type: mimeType });
+        const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
+        const blob = new Blob(recordedChunks, { type: actualType });
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         
         reader.onloadend = async () => {
           const base64data = reader.result.split(',')[1];
-          const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+          const extension = actualType.includes('mp4') ? 'mp4' : 'webm';
           const filename = `guest_message_${Date.now()}.${extension}`;
 
           try {
@@ -219,7 +253,7 @@
               headers: { 'Content-Type': 'text/plain' },
               body: JSON.stringify({
                 filename: filename,
-                mimeType: mimeType,
+                mimeType: actualType,
                 base64: base64data
               })
             });
