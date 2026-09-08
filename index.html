@@ -16,12 +16,12 @@
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 4:3 の横長枠設定 */
+    /* 1080p (16:9) の表示枠 */
     .video-container {
       width: 100%;
-      max-width: 420px;
+      max-width: 480px;
       margin: 0 auto;
-      aspect-ratio: 4 / 3;
+      aspect-ratio: 16 / 9;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -99,9 +99,9 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // フルHD相当の4:3高解像度キャンバス（1440x1080）
+    // 1080p (1920x1080) 固定描画キャンバス
     const canvas = document.createElement('canvas');
-    canvas.width = 1440;
+    canvas.width = 1920;
     canvas.height = 1080;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
@@ -109,11 +109,13 @@
 
     async function initCamera() {
       try {
+        // 1080p（1920×1080）の映像取得を優先リクエスト
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 1920 },
-            height: { ideal: 1440 }
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 30 }
           }, 
           audio: true 
         });
@@ -130,11 +132,12 @@
 
         preview.srcObject = cameraStream;
 
+        // 1080p (16:9) キャンバスへ出力
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
             const vW = preview.videoWidth;
             const vH = preview.videoHeight;
-            const targetAspect = 4 / 3;
+            const targetAspect = 16 / 9;
             let sW, sH, sX, sY;
 
             if (vW / vH > targetAspect) {
@@ -171,13 +174,14 @@
         mimeType = 'video/mp4';
       }
 
+      // 1080p キャンバスからストリームを生成
       const canvasStream = canvas.captureStream(30);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // ビットレートを 2.8Mbps に極限調整（GAS送信10MB上限の境界線）
+      // GASの容量上限（10MB）直前で1080pの画質を最良に保つビットレート設定
       const options = {
         mimeType: mimeType,
         videoBitsPerSecond: 2800000 
