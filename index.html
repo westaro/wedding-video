@@ -1,41 +1,195 @@
-// ① カメラ初期化（解像度を640x480に下げて軽量化）
-async function initCamera() {
-  try {
-    const constraints = {
-      audio: true,
-      video: {
-        facingMode: "user",
-        aspectRatio: { ideal: 4 / 3 },
-        width: { ideal: 640 },   // 1280から640に変更
-        height: { ideal: 480 }   // 960から480に変更
-      }
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    videoElem.srcObject = stream;
-    statusElem.textContent = "ボタンを押すと録画が始まります";
-  } catch (err) {
-    console.error(err);
-    statusElem.textContent = "カメラの起動に失敗しました。アクセスを許可してください。";
-  }
-}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wedding Video Message</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #f7f7f7;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .container {
+      width: 100%; max-width: 480px; background: #fff;
+      padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    h1 { font-size: 1.2rem; color: #333; margin-bottom: 16px; }
+    
+    /* 4:3 アスペクト比コンテナ */
+    .video-wrapper {
+      position: relative; width: 100%; padding-top: 75%; /* 4:3比率 (3/4 = 75%) */
+      background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+    }
+    video {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
+    }
+    
+    .timer-overlay {
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(0, 0, 0, 0.6); color: #fff;
+      padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;
+    }
 
-// ② 録画開始（ビットレート制限を追加）
-function startRecording() {
-  recordedChunks = [];
-  const mimeType = getSupportedMimeType();
+    .btn {
+      width: 100%; padding: 14px; font-size: 1rem; font-weight: bold;
+      border: none; border-radius: 30px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-record { background: #e63946; color: #fff; }
+    .btn-stop { background: #1d3557; color: #fff; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    .status { margin-top: 12px; font-size: 0.9rem; color: #555; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>お祝いメッセージ動画を撮影</h1>
   
-  // ビットレートを1Mbps(1,000,000 bps)に制限して容量を小さくする
-  const options = {
-    videoBitsPerSecond: 1000000 
-  };
-  if (mimeType) {
-    options.mimeType = mimeType;
+  <div class="video-wrapper">
+    <video id="preview" autoplay playsinline muted></video>
+    <div class="timer-overlay" id="timer">00:20</div>
+  </div>
+
+  <button id="actionBtn" class="btn btn-record">撮影開始</button>
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec";
+  const MAX_TIME = 20;
+
+  const preview = document.getElementById('preview');
+  const actionBtn = document.getElementById('actionBtn');
+  const timerEl = document.getElementById('timer');
+  const statusEl = document.getElementById('status');
+
+  let mediaRecorder;
+  let recordedChunks = [];
+  let stream;
+  let countdownTimer;
+  let timeLeft = MAX_TIME;
+  let isRecording = false;
+
+  // カメラ起動 (4:3 アスペクト比要求)
+  async function initCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { aspectRatio: { ideal: 4/3 }, facingMode: "user" },
+        audio: true
+      });
+      preview.srcObject = stream;
+    } catch (err) {
+      statusEl.textContent = "カメラの起動に失敗しました。アクセス許可を確認してください。";
+    }
   }
 
-  mediaRecorder = new MediaRecorder(stream, options);
+  // 録画開始
+  function startRecording() {
+    recordedChunks = [];
+    
+    // iOS/Safari 互換性を考慮した MIME Type の選択
+    let options = { mimeType: 'video/webm' };
+    if (!MediaRecorder.isTypeSupported('video/webm')) {
+      if (MediaRecorder.isTypeSupported('video/mp4')) {
+        options = { mimeType: 'video/mp4' };
+      } else {
+        options = {};
+      }
+    }
 
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) recordedChunks.push(e.data);
-  };
+    mediaRecorder = new MediaRecorder(stream, options);
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
 
-  // （〜以降の処理はそのまま〜）
+    mediaRecorder.onstop = uploadVideo;
+
+    mediaRecorder.start();
+    isRecording = true;
+    
+    actionBtn.textContent = "撮影停止して送信";
+    actionBtn.className = "btn btn-stop";
+    
+    timeLeft = MAX_TIME;
+    updateTimerDisplay();
+
+    countdownTimer = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) {
+        stopRecording();
+      }
+    }, 1000);
+  }
+
+  // 録画停止
+  function stopRecording() {
+    if (!isRecording) return;
+    isRecording = false;
+    clearInterval(countdownTimer);
+    mediaRecorder.stop();
+    
+    actionBtn.disabled = true;
+    actionBtn.textContent = "送信中...";
+    statusEl.textContent = "動画をGoogleドライブへ保存しています...";
+  }
+
+  function updateTimerDisplay() {
+    const sec = String(timeLeft).padStart(2, '0');
+    timerEl.textContent = `00:${sec}`;
+  }
+
+  // 動画アップロード
+  function uploadVideo() {
+    const mimeType = mediaRecorder.mimeType || 'video/webm';
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(recordedChunks, { type: mimeType });
+
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const base64Data = reader.result;
+
+      // GASへPOST送信 (CORS制約回避のため text/plain で送信)
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ fileData: base64Data, mimeType: mimeType, ext: ext })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          statusEl.textContent = "送信が完了しました！ありがとうございました。";
+          actionBtn.style.display = "none";
+        } else {
+          throw new Error(data.message);
+        }
+      })
+      .catch(err => {
+        statusEl.textContent = "送信に失敗しました。もう一度試してください。";
+        actionBtn.disabled = false;
+        actionBtn.textContent = "再送信";
+      });
+    };
+  }
+
+  // ボタンイベント
+  actionBtn.addEventListener('click', () => {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  });
+
+  window.addEventListener('load', initCamera);
+</script>
+
+</body>
+</html>
