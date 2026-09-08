@@ -99,19 +99,22 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // 動画保存用のキャンバス（強制的に 1280x960 = 4:3 横長で固定）
+    // 動画保存用キャンバス（1280x960 ＝ 高画質4:3）
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
     canvas.height = 960;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     async function initCamera() {
       try {
+        // カメラから高解像度の元映像を取得（高画質化）
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 960 }
+            width: { ideal: 1920 },
+            height: { ideal: 1440 }
           }, 
           audio: true 
         });
@@ -128,7 +131,7 @@
 
         preview.srcObject = cameraStream;
 
-        // カメラ映像をリアルタイムで4:3枠に中央クロップ描画
+        // リアルタイムクロップ描画（4:3高画質出力）
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
             const vW = preview.videoWidth;
@@ -170,16 +173,16 @@
         mimeType = 'video/mp4';
       }
 
-      // 4:3固定のキャンバス映像ストリームにマイク音声を結合
       const canvasStream = canvas.captureStream(30);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
+      // ビットレートを 2.5Mbps に引き上げて画質を大幅向上
       const options = {
         mimeType: mimeType,
-        videoBitsPerSecond: 1200000 
+        videoBitsPerSecond: 2500000 
       };
 
       mediaRecorder = new MediaRecorder(canvasStream, options);
