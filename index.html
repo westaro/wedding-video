@@ -99,13 +99,13 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // 1920x1440 (4:3) 高解像度固定描画キャンバス
+    // 1440x1080 (4:3) クッキリ高解像度キャンバス
     const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1440;
+    canvas.width = 1440;
+    canvas.height = 1080;
     const ctx = canvas.getContext('2d', { alpha: false });
 
-    // 端末がサポートする高画質コーデックを優先選択
+    // 端末がサポートする高画質コーデックを自動検出
     function getSupportedMimeType() {
       const types = [
         'video/mp4;codecs=avc1.640028',
@@ -122,12 +122,12 @@
 
     async function initCamera() {
       try {
-        // カメラの最高画質入力を優先リクエスト
+        // カメラの最高画質入力をリクエスト
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 2560, min: 1920 },
-            height: { ideal: 1920, min: 1440 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1440, min: 960 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -148,7 +148,7 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // 4:3 1920x1440 高精細リアルタイム描写
+        // 4:3 高精細リアルタイムクロップ描画
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
             const vW = preview.videoWidth;
@@ -187,16 +187,16 @@
       
       const mimeType = getSupportedMimeType();
 
-      // 30fps で最高精細の映像ストリームを取得
+      // 30fps で解像感の高いストリームを出力
       const canvasStream = canvas.captureStream(30);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // 7.0Mbps (20秒間で約17.5MBの超高画質動画を出力)
+      // 4.2Mbps (20秒間で約10.5MB / GAS送信時約14MBの安定・高画質バランス設定)
       const options = {
-        videoBitsPerSecond: 7000000 
+        videoBitsPerSecond: 4200000 
       };
       if (mimeType) {
         options.mimeType = mimeType;
@@ -213,7 +213,7 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        status.innerText = '高画質動画をGoogleドライブに送信中... ⏳';
+        status.innerText = 'Googleドライブに送信中... ⏳';
         status.style.color = '#333';
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
