@@ -99,11 +99,13 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // クッキリ描画用の動的キャンバス
+    // 1920x1440 (4:3) 高解像度固定描画キャンバス
     const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1440;
     const ctx = canvas.getContext('2d', { alpha: false });
 
-    // 端末がサポートする最もくっきり映るコーデックを検出
+    // 端末がサポートする高画質コーデックを優先選択
     function getSupportedMimeType() {
       const types = [
         'video/mp4;codecs=avc1.640028',
@@ -120,12 +122,12 @@
 
     async function initCamera() {
       try {
-        // カメラの最高画質入力をリクエスト
+        // カメラの最高画質入力を優先リクエスト
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 2560, min: 1280 },
-            height: { ideal: 1920, min: 960 },
+            width: { ideal: 2560, min: 1920 },
+            height: { ideal: 1920, min: 1440 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -143,33 +145,12 @@
 
         preview.srcObject = cameraStream;
 
-        // 映像の読み込み完了時、カメラのネイティブ解像度に合わせてキャンバスを拡大縮小なしでフィット設定
-        preview.onloadedmetadata = () => {
-          updateCanvasSize();
-        };
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
-        function updateCanvasSize() {
-          const vW = preview.videoWidth || 1280;
-          const vH = preview.videoHeight || 960;
-          const targetAspect = 4 / 3;
-
-          if (vW / vH > targetAspect) {
-            canvas.height = vH;
-            canvas.width = Math.round(vH * targetAspect);
-          } else {
-            canvas.width = vW;
-            canvas.height = Math.round(vW / targetAspect);
-          }
-
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-        }
-
-        // 4:3 リアルタイム高精細クロップ描画
+        // 4:3 1920x1440 高精細リアルタイム描写
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
-            if (canvas.width === 0) updateCanvasSize();
-
             const vW = preview.videoWidth;
             const vH = preview.videoHeight;
             const targetAspect = 4 / 3;
@@ -206,16 +187,16 @@
       
       const mimeType = getSupportedMimeType();
 
-      // 30fpsでキャプチャ（1コマあたりの画質と輪郭のくっきり感を最大化）
+      // 30fps で最高精細の映像ストリームを取得
       const canvasStream = canvas.captureStream(30);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // GAS送信上限（10MB）ギリギリの高ビットレート（3.2Mbps）
+      // 7.0Mbps (20秒間で約17.5MBの超高画質動画を出力)
       const options = {
-        videoBitsPerSecond: 3200000 
+        videoBitsPerSecond: 7000000 
       };
       if (mimeType) {
         options.mimeType = mimeType;
@@ -232,7 +213,7 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        status.innerText = 'Googleドライブに送信中... ⏳';
+        status.innerText = '高画質動画をGoogleドライブに送信中... ⏳';
         status.style.color = '#333';
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
