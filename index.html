@@ -6,123 +6,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Wedding Message Booth</title>
   <style>
-    body { 
-      font-family: 'Helvetica Neue', Arial, sans-serif; 
-      text-align: center; 
-      background: #fdfaf6; 
-      padding: 15px; 
-      color: #333; 
-    }
-    h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
-    p { margin-bottom: 15px; font-size: 14px; }
-    
-    /* 16:9 の横長枠設定 */
-    .video-container {
-      width: 100%;
-      max-width: 480px; /* 横長表示に合わせて枠幅を調整 */
-      margin: 0 auto;
-      aspect-ratio: 16 / 9; /* 16:9 の比率に設定 */
-      border-radius: 16px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-      position: relative;
-    }
-    
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover; /* 16:9枠全体に黒帯なしで表示 */
-    }
-
-    #timerBadge {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(255, 71, 87, 0.85);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 14px;
-      display: none;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #fdfaf6; padding: 20px; color: #333; }
+    h2 { color: #d4af37; margin-bottom: 5px; }
+    video { width: 100%; max-width: 400px; border-radius: 12px; background: #000; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     .controls { margin-top: 20px; }
-    button { 
-      padding: 15px 40px; 
-      font-size: 18px; 
-      border-radius: 30px; 
-      border: none; 
-      cursor: pointer; 
-      font-weight: bold; 
-      transition: 0.3s; 
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    #recordBtn { background: #e55039; color: white; }
-    #recordBtn:active { background: #eb2f06; }
+    button { padding: 15px 40px; font-size: 18px; border-radius: 30px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    #recordBtn { background: #ff4757; color: white; }
+    #recordBtn:active { background: #ff6b81; }
     #stopBtn { background: #2f3542; color: white; display: none; }
-    #status { margin-top: 15px; font-weight: bold; font-size: 15px; min-height: 24px; }
+    #status { margin-top: 15px; font-weight: bold; font-size: 16px; min-height: 24px; }
   </style>
 </head>
 <body>
   <h2>Happy Wedding!</h2>
   <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
-  <div class="video-container">
-    <div id="timerBadge">残り 20秒</div>
-    <video id="preview" autoplay muted playsinline></video>
-  </div>
+  <!-- playsinlineはiOS Safariで全画面にならずインライン再生させるために必須 -->
+  <video id="preview" autoplay muted playsinline></video>
   
   <div class="controls">
-    <button id="recordBtn">録画開始</button>
-    <button id="stopBtn">録画ストップ</button>
+    <button id="recordBtn">撮影スタート</button>
+    <button id="stopBtn">撮影ストップ</button>
   </div>
   <div id="status"></div>
 
   <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbw9oglBwZb9rC8LcyXmT0yppsie8PcNaFPitNDMKIDm4nK0PQ-8E3jPXk2dIwfY9hZ1-w/exec';
+    // ★ここにGASのウェブアプリURLを貼り付けます★
+    const scriptURL = 'YOUR_GAS_WEB_APP_URL';
     
     let mediaRecorder;
     let recordedChunks = [];
     let stream;
-    let maxTime = 20;
-    let timeLeft = maxTime;
+    let maxTime = 20000; // 20秒（ミリ秒）
     let timer;
-    let countdownInterval;
 
     const preview = document.getElementById('preview');
     const recordBtn = document.getElementById('recordBtn');
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
-    const timerBadge = document.getElementById('timerBadge');
 
+    // カメラの初期化
     async function initCamera() {
       try {
-        // 16:9（1280×720）を優先指定して横長で映像を取得
+        // スマホのインカメラ（user）を指定、音声も取得
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: "user",
-            aspectRatio: { ideal: 1.7777777778 }, // 16/9
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }, 
+          video: { facingMode: "user" }, 
           audio: true 
         });
-
-        // ズーム機能をサポートしている場合、最小倍率（広角）に設定
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
-          const capabilities = videoTrack.getCapabilities();
-          if (capabilities.zoom) {
-            await videoTrack.applyConstraints({
-              advanced: [{ zoom: capabilities.zoom.min }]
-            });
-          }
-        }
-
         preview.srcObject = stream;
       } catch (err) {
         status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
@@ -132,19 +62,15 @@
 
     initCamera();
 
+    // 撮影スタート
     recordBtn.addEventListener('click', () => {
       recordedChunks = [];
       
-      let mimeType = 'video/webm';
+      // iOSとAndroidでサポートされている形式を判定
+      let options = { mimeType: 'video/webm' };
       if (!MediaRecorder.isTypeSupported('video/webm')) {
-        mimeType = 'video/mp4';
+        options = { mimeType: 'video/mp4' };
       }
-
-      // ビットレート制限（1.2Mbps）でデータ転送サイズを制御
-      const options = {
-        mimeType: mimeType,
-        videoBitsPerSecond: 1200000 
-      };
 
       mediaRecorder = new MediaRecorder(stream, options);
 
@@ -153,31 +79,30 @@
       };
 
       mediaRecorder.onstop = async () => {
-        clearInterval(countdownInterval);
-        clearTimeout(timer);
-        timerBadge.style.display = 'none';
-
         status.innerText = 'Googleドライブに送信中... ⏳';
         status.style.color = '#333';
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
-        const blob = new Blob(recordedChunks, { type: mimeType });
+        // 動画データをBlob化してBase64に変換
+        const blob = new Blob(recordedChunks, { type: options.mimeType });
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         
         reader.onloadend = async () => {
           const base64data = reader.result.split(',')[1];
-          const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+          const extension = options.mimeType.includes('mp4') ? 'mp4' : 'webm';
           const filename = `guest_message_${Date.now()}.${extension}`;
 
           try {
+            // GASへPOST送信
             const response = await fetch(scriptURL, {
               method: 'POST',
+              // GASのCORS制約を回避するため 'text/plain' として送信
               headers: { 'Content-Type': 'text/plain' },
               body: JSON.stringify({
                 filename: filename,
-                mimeType: mimeType,
+                mimeType: options.mimeType,
                 base64: base64data
               })
             });
@@ -191,39 +116,32 @@
             }
           } catch (error) {
             console.error(error);
-            status.innerText = '送信処理を行いました（保存確認をしてください）';
+            // GASの仕様上、CORSエラーが出ても実際は保存されていることが多い
+            status.innerText = '送信処理を行いました（エラーが続く場合は新郎新婦へお知らせください）';
           }
         };
       };
 
+      // 録画開始
       mediaRecorder.start();
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
-
-      timeLeft = maxTime;
-      timerBadge.innerText = `残り ${timeLeft}秒`;
-      timerBadge.style.display = 'block';
-      status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
+      status.innerText = '🔴 録画中... (最大20秒)';
       status.style.color = '#ff4757';
 
-      countdownInterval = setInterval(() => {
-        timeLeft--;
-        if (timeLeft >= 0) {
-          timerBadge.innerText = `残り ${timeLeft}秒`;
-          status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
-        }
-      }, 1000);
-
+      // 20秒で強制的にストップ
       timer = setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, maxTime * 1000);
+      }, maxTime);
     });
 
+    // 途中で撮影ストップ
     stopBtn.addEventListener('click', () => {
       if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
+        clearTimeout(timer);
       }
     });
   </script>
