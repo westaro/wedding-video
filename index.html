@@ -99,36 +99,24 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // 1440x1080 (4:3) クッキリ高解像度キャンバス
+    // 高精細かつ処理が軽い4:3（1440x1080）描画用キャンバス
     const canvas = document.createElement('canvas');
     canvas.width = 1440;
     canvas.height = 1080;
-    const ctx = canvas.getContext('2d', { alpha: false });
-
-    // 端末がサポートする高画質コーデックを自動検出
-    function getSupportedMimeType() {
-      const types = [
-        'video/mp4;codecs=avc1.640028',
-        'video/mp4',
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm'
-      ];
-      for (const t of types) {
-        if (MediaRecorder.isTypeSupported(t)) return t;
-      }
-      return '';
-    }
+    const ctx = canvas.getContext('2d', { alpha: false }); // alpha: false で描画パフォーマンスを強化
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     async function initCamera() {
       try {
-        // カメラの最高画質入力をリクエスト
+        // 高フレームレート（最大60fps）と高解像度を優先要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
+            aspectRatio: { ideal: 1.3333333333 },
             width: { ideal: 1920, min: 1280 },
             height: { ideal: 1440, min: 960 },
-            frameRate: { ideal: 30 }
+            frameRate: { ideal: 60, min: 30 }
           }, 
           audio: true 
         });
@@ -145,10 +133,7 @@
 
         preview.srcObject = cameraStream;
 
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        // 4:3 高精細リアルタイムクロップ描画
+        // 4:3 リアルタイムクロップ描画（コマ落ち防止の高速レンダリング）
         function drawFrame() {
           if (preview.readyState === preview.HAVE_ENOUGH_DATA) {
             const vW = preview.videoWidth;
@@ -185,22 +170,23 @@
     recordBtn.addEventListener('click', () => {
       recordedChunks = [];
       
-      const mimeType = getSupportedMimeType();
+      let mimeType = 'video/webm';
+      if (!MediaRecorder.isTypeSupported('video/webm')) {
+        mimeType = 'video/mp4';
+      }
 
-      // 30fps で解像感の高いストリームを出力
-      const canvasStream = canvas.captureStream(30);
+      // 60fps でキャンバスからストリームを出力（滑らかな動きを実現）
+      const canvasStream = canvas.captureStream(60);
       const audioTrack = cameraStream.getAudioTracks()[0];
       if (audioTrack) {
         canvasStream.addTrack(audioTrack);
       }
 
-      // 4.2Mbps (20秒間で約10.5MB / GAS送信時約14MBの安定・高画質バランス設定)
+      // GAS送信の10MB上限内で高解像度・滑らかさを保つビットレート（3.0Mbps）
       const options = {
-        videoBitsPerSecond: 4200000 
+        mimeType: mimeType,
+        videoBitsPerSecond: 3000000 
       };
-      if (mimeType) {
-        options.mimeType = mimeType;
-      }
 
       mediaRecorder = new MediaRecorder(canvasStream, options);
 
@@ -218,14 +204,13 @@
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
-        const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
-        const blob = new Blob(recordedChunks, { type: actualType });
+        const blob = new Blob(recordedChunks, { type: mimeType });
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         
         reader.onloadend = async () => {
           const base64data = reader.result.split(',')[1];
-          const extension = actualType.includes('mp4') ? 'mp4' : 'webm';
+          const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
           const filename = `guest_message_${Date.now()}.${extension}`;
 
           try {
@@ -234,7 +219,7 @@
               headers: { 'Content-Type': 'text/plain' },
               body: JSON.stringify({
                 filename: filename,
-                mimeType: actualType,
+                mimeType: mimeType,
                 base64: base64data
               })
             });
