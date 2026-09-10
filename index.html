@@ -117,7 +117,6 @@
 
     async function initCamera() {
       try {
-        // 4:3の比率で確実に取得（1280x960）
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
@@ -130,7 +129,6 @@
 
         preview.srcObject = cameraStream;
       } catch (err) {
-        // exact指定でエラーが出る環境用フォールバック (4:3)
         try {
           cameraStream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
@@ -183,6 +181,9 @@
         const formData = new FormData();
         formData.append('file', blob);
         formData.append('upload_preset', uploadPreset);
+        
+        // 回転をリセットし、4:3 (横長) での格納を強制
+        formData.append('angle', '0');
 
         try {
           const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
@@ -208,7 +209,6 @@
         }
       };
 
-      // 1000ms (1秒) ごとにデータを区切ってキャプチャ（フリーズ・コマ落ち防止）
       mediaRecorder.start(1000);
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
