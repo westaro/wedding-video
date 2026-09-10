@@ -81,7 +81,6 @@
   <div id="status"></div>
 
   <script>
-    // 設定済み認証情報
     const cloudName = 'wf1qutrj'; 
     const uploadPreset = 'jr3hrfi9'; 
 
@@ -99,7 +98,6 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
 
-    // 1920x1440 (4:3) 高解像度キャンバス
     const canvas = document.createElement('canvas');
     canvas.width = 1920;
     canvas.height = 1440;
@@ -179,7 +177,6 @@
         canvasStream.addTrack(audioTrack);
       }
 
-      // 4.5Mbps（20秒間で約11MB・高画質と容量削減を両立）
       const options = { videoBitsPerSecond: 4500000 };
       if (mimeType) { options.mimeType = mimeType; }
 
@@ -201,11 +198,10 @@
 
         const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
         const blob = new Blob(recordedChunks, { type: actualType });
-        const extension = actualType.includes('mp4') ? 'mp4' : 'webm';
-        const filename = `guest_message_${Date.now()}.${extension}`;
 
         const formData = new FormData();
-        formData.append('file', blob, filename);
+        // エラー回避のためファイル名指定を削除
+        formData.append('file', blob);
         formData.append('upload_preset', uploadPreset);
 
         try {
@@ -219,6 +215,7 @@
             status.innerText = '送信完了！ありがとうございました🎉';
             status.style.color = '#2ed573';
           } else {
+            console.error('Cloudinary Error:', result);
             throw new Error(result.error ? result.error.message : '送信に失敗しました');
           }
         } catch (error) {
