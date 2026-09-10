@@ -29,9 +29,9 @@
       gap: 15px;
     }
 
-    /* 動画コンテナ（16:9 / 4:3 対応） */
+    /* 動画コンテナ */
     .video-container {
-      height: 85vh;
+      height: 80vh;
       aspect-ratio: 16 / 9;
       max-width: 60vw;
       border-radius: 12px;
@@ -92,31 +92,26 @@
     #status { margin-top: 10px; font-weight: bold; font-size: 13px; word-break: break-all; }
     #resultLink { display: block; margin-top: 8px; color: #007bff; text-decoration: underline; font-weight: bold; font-size: 12px; }
 
-    /* 縦持ち時（幅より高さが大きい場合）のみ案内を表示 */
-    @media (aspect-ratio: 1/1) or (max-aspect-ratio: 13/10) {
-      .app-layout { display: none !important; }
-      .rotate-notice {
-        display: flex !important;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.92);
-        color: #fff;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        font-weight: bold;
-        z-index: 9999;
-        padding: 20px;
-        text-align: center;
-      }
+    /* 縦持ち時案内オーバーレイ */
+    #rotateNotice {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.92);
+      color: #fff;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 9999;
+      padding: 20px;
+      text-align: center;
     }
-
-    .rotate-notice { display: none; }
   </style>
 </head>
 <body>
 
-  <div class="rotate-notice">
+  <div id="rotateNotice">
     📱 スマホを横向きにして撮影してください
   </div>
 
@@ -157,6 +152,22 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
     const resultLink = document.getElementById('resultLink');
+    const rotateNotice = document.getElementById('rotateNotice');
+
+    // 横持ち判定のJavaScript制御
+    function checkOrientation() {
+      if (window.innerWidth < window.innerHeight) {
+        // 縦持ちの場合
+        rotateNotice.style.display = 'flex';
+      } else {
+        // 横持ちの場合（案内を消して撮影可能に）
+        rotateNotice.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('load', checkOrientation);
+    checkOrientation();
 
     function getSupportedMimeType() {
       const types = [
@@ -174,7 +185,6 @@
 
     async function initCamera() {
       try {
-        // 横画面用のカメラ設定（16:9〜4:3に対応する理想解像度）
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
@@ -226,7 +236,7 @@
         const formData = new FormData();
         formData.append('file', blob);
         formData.append('upload_preset', uploadPreset);
-        formData.append('angle', '0'); // 横長を維持して格納
+        formData.append('angle', '0');
 
         try {
           const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
