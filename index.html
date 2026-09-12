@@ -5,21 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Wedding Message Booth</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    
     body { 
       font-family: 'Helvetica Neue', Arial, sans-serif; 
       text-align: center; 
       background: #fdfaf6; 
       padding: 15px; 
       color: #333; 
+      margin: 0;
+      /* 画面の不要なスクロールや勝手な挙動を防止 */
+      touch-action: manipulation;
     }
+
     h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
     p { margin-bottom: 15px; font-size: 14px; }
     
     .video-container {
       width: 100%;
-      max-width: 330px; /* 3:4の縦長が見やすく収まる幅 */
+      max-width: 330px;
       margin: 0 auto;
-      aspect-ratio: 3 / 4; /* 3:4 (縦長) に指定 */
+      aspect-ratio: 3 / 4;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -31,6 +39,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      /* インカメラの左右反転（鏡像）を自然な向きに正す */
+      transform: scaleX(-1);
     }
 
     #timerBadge {
@@ -46,6 +56,7 @@
       display: none;
       backdrop-filter: blur(4px);
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
     }
 
     .controls { margin-top: 20px; }
@@ -64,6 +75,20 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     #status { margin-top: 15px; font-weight: bold; font-size: 15px; min-height: 24px; word-break: break-all; }
     #resultLink { display: block; margin-top: 10px; color: #007bff; text-decoration: underline; font-weight: bold; }
+
+    /* 横向きに傾けた際にOSの自動回転で上下反転するのを抑止 */
+    @media screen and (orientation: landscape) {
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      .video-container {
+        max-width: 260px; /* 横画面時も収まるサイズ調整 */
+      }
+    }
   </style>
 </head>
 <body>
@@ -117,13 +142,12 @@
 
     async function initCamera() {
       try {
-        // 3:4 (960x1280) 縦長でカメラを取得
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
             width: { ideal: 960 },
             height: { ideal: 1280 },
-            aspectRatio: { ideal: 0.75 }, // 3:4
+            aspectRatio: { ideal: 0.75 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -132,7 +156,6 @@
         preview.srcObject = cameraStream;
       } catch (err) {
         try {
-          // exact/idealの互換性用フォールバック (3:4)
           cameraStream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
               facingMode: "user",
