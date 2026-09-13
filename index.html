@@ -24,7 +24,7 @@
       align-items: center;
     }
 
-    /* 画面を強制回転させず、スマホの向き（縦/横）にそのまま追従させるコンテナ */
+    /* 画面を強制回転させる仕組みを外し、スマホの持ち方に自然に追従させます */
     .screen-rotator {
       width: 100vw;
       height: 100vh;
@@ -334,7 +334,7 @@
 
       timer = setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          mediaReader.stop();
+          mediaRecorder.stop();
         }
       }, maxTime * 1000);
     });
