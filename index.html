@@ -14,32 +14,47 @@
       text-align: center; 
       background: #fdfaf6; 
       margin: 0;
-      padding: 10px;
+      padding: 0;
+      width: 100vw;
       height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
+    .screen-rotator {
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      position: absolute;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
-      touch-action: manipulation;
+      background: #fdfaf6;
+      padding: 15px;
     }
 
     h2 { 
       color: #d4af37; 
-      margin: 0 0 4px 0; 
-      font-size: 18px; 
+      margin: 0 0 5px 0; 
+      font-size: 20px; 
     }
     p { 
-      margin: 0 0 10px 0; 
-      font-size: 13px; 
+      margin: 0 0 15px 0; 
+      font-size: 14px; 
       color: #555;
     }
     
     .video-container {
       width: 100%;
-      max-width: 480px;
+      max-width: 420px;
       aspect-ratio: 4 / 3;
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
@@ -70,12 +85,12 @@
     }
 
     .controls { 
-      margin-top: 12px; 
+      margin-top: 15px; 
     }
     
     button { 
-      padding: 12px 36px; 
-      font-size: 16px; 
+      padding: 14px 40px; 
+      font-size: 18px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -89,7 +104,7 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 8px; 
+      margin-top: 10px; 
       font-weight: bold; 
       font-size: 14px; 
       min-height: 20px; 
@@ -98,30 +113,39 @@
     
     #resultLink { 
       display: block; 
-      margin-top: 6px; 
+      margin-top: 8px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
-      font-size: 13px;
+      font-size: 14px;
+    }
+
+    /* 撮影中に文字や案内を隠すクラス */
+    .recording-mode .hide-during-rec {
+      display: none !important;
     }
   </style>
 </head>
 <body>
-  <h2>Happy Wedding!</h2>
-  <p>📱 スマホを横に向けて、お祝いメッセージをお願いします（最大20秒）</p>
-  
-  <div class="video-container">
-    <div id="timerBadge">残り 20秒</div>
-    <video id="preview" autoplay muted playsinline></video>
-    <canvas id="recordCanvas" style="display:none;"></canvas>
+  <div class="screen-rotator" id="screenRotator">
+    <div class="hide-during-rec">
+      <h2>Happy Wedding!</h2>
+      <p>📱 横向きで撮影してください</p>
+    </div>
+    
+    <div class="video-container">
+      <div id="timerBadge">残り 20秒</div>
+      <video id="preview" autoplay muted playsinline></video>
+      <canvas id="recordCanvas" style="display:none;"></canvas>
+    </div>
+    
+    <div class="controls">
+      <button id="recordBtn">録画開始</button>
+      <button id="stopBtn">録画ストップ</button>
+    </div>
+    <div id="status" class="hide-during-rec"></div>
+    <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
   </div>
-  
-  <div class="controls">
-    <button id="recordBtn">録画開始</button>
-    <button id="stopBtn">録画ストップ</button>
-  </div>
-  <div id="status"></div>
-  <a id="resultLink" href="" target="_blank" style="display: none;">🎥 保存された動画を確認する</a>
 
   <script>
     const cloudName = 'wf1qutrj'; 
@@ -145,6 +169,7 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
     const resultLink = document.getElementById('resultLink');
+    const screenRotator = document.getElementById('screenRotator');
 
     function getSupportedMimeType() {
       const types = [
@@ -164,7 +189,7 @@
           video: { 
             facingMode: "user",
             width: { ideal: 1280 },
-            height: { ideal: 720 },
+            height: { ideal: 960 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -213,6 +238,9 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
+      // 撮影中は文字やタイトルを非表示にする
+      screenRotator.classList.add('recording-mode');
+
       drawFrame();
       const canvasStream = canvas.captureStream(30);
 
@@ -243,6 +271,9 @@
         clearInterval(countdownInterval);
         clearTimeout(timer);
         timerBadge.style.display = 'none';
+
+        // 送信処理中は文字エリアを再表示してステータスを見せる
+        screenRotator.classList.remove('recording-mode');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
@@ -296,14 +327,11 @@
       timeLeft = maxTime;
       timerBadge.innerText = `残り ${timeLeft}秒`;
       timerBadge.style.display = 'block';
-      status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
-      status.style.color = '#ff4757';
 
       countdownInterval = setInterval(() => {
         timeLeft--;
         if (timeLeft >= 0) {
           timerBadge.innerText = `残り ${timeLeft}秒`;
-          status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
         }
       }, 1000);
 
