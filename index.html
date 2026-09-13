@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth</title>
+  <title>Wedding Message Booth - Landscape</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -13,29 +13,21 @@
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
       overflow: hidden; touch-action: manipulation;
-      display: flex; justify-content: center; align-items: center;
-    }
-    /* UI全体を90度回転させて、縦持ちでも横向きレイアウトに見せるコンテナ */
-    .screen-rotator {
-      width: 100vh; height: 100vw;
-      transform: rotate(90deg);
-      transform-origin: center center;
-      position: absolute;
       display: flex; flex-direction: column;
       justify-content: space-between; align-items: center;
-      background: #fdfaf6; padding: 15px;
+      padding: 10px 20px;
     }
-    .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    h2 { color: #d4af37; margin: 0; font-size: 18px; }
-    p { margin: 0; font-size: 13px; color: #555; }
     
-    /* 16:9 またはご希望の比率を維持する動画コンテナ */
+    .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    h2 { color: #d4af37; margin: 0; font-size: 16px; }
+    p { margin: 0; font-size: 12px; color: #555; }
+    
+    /* 横向き画面にぴったり収まる 16:9 コンテナ（帯なし・cover） */
     .video-container {
-      width: 78vh; 
-      height: 43.875vh; /* 16:9 の正確な比率 */
-      max-width: 90vw;
-      max-height: 50vw;
-      border-radius: 16px; overflow: hidden;
+      width: 100%;
+      max-width: 70vh; /* 横持ちの高さ基準で幅を調整 */
+      aspect-ratio: 16 / 9; /* 比率を16:9に固定 */
+      border-radius: 12px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
       margin: auto 0;
@@ -44,57 +36,57 @@
     video { 
       width: 100%; 
       height: 100%; 
-      object-fit: cover; 
-      /* 親の90度回転を打ち消して(-90deg)、カメラ映像を自然な横向きにする＋左右反転 */
-      transform: rotate(-90deg) scaleX(-1);
+      object-fit: cover; /* 黒帯を完全に排除 */
+      transform: scaleX(-1); /* フロントカメラの左右反転 */
     }
 
     #timerBadge {
       position: absolute; top: 10px; right: 10px;
       background: rgba(255, 71, 87, 0.85); color: white;
-      padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 13px;
+      padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;
       display: none; z-index: 10;
     }
+    
+    .bottom-panel { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%; }
     .controls { margin: 0; }
     button {
-      padding: 12px 35px; font-size: 16px; border-radius: 30px;
+      padding: 10px 30px; font-size: 15px; border-radius: 30px;
       border: none; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     #recordBtn { background: #e55039; color: white; }
     #stopBtn { background: #2f3542; color: white; display: none; }
-    #status { margin-top: 5px; font-weight: bold; font-size: 13px; min-height: 18px; }
-    #resultLink { display: block; margin-top: 4px; color: #007bff; text-decoration: underline; font-size: 13px; }
+    #status { font-weight: bold; font-size: 12px; min-height: 16px; }
+    #resultLink { color: #007bff; text-decoration: underline; font-size: 12px; }
+    
     .recording-mode .hide-during-rec { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="screen-rotator" id="screenRotator">
-    <div class="top-panel hide-during-rec">
-      <h2>Happy Wedding!</h2>
-      <p>📱 スマホを横向きにして撮影してください</p>
+  <div class="top-panel hide-during-rec">
+    <h2>Happy Wedding!</h2>
+    <p>📱 スマホを横向きにして撮影してください</p>
+  </div>
+  
+  <div class="video-container" id="videoContainer">
+    <div id="timerBadge">残り 20秒</div>
+    <video id="preview" autoplay muted playsinline></video>
+    <canvas id="recordCanvas" style="display:none;"></canvas>
+  </div>
+  
+  <div class="bottom-panel">
+    <div class="controls">
+      <button id="recordBtn">録画開始</button>
+      <button id="stopBtn">録画ストップ</button>
     </div>
-    
-    <div class="video-container">
-      <div id="timerBadge">残り 20秒</div>
-      <video id="preview" autoplay muted playsinline></video>
-      <canvas id="recordCanvas" style="display:none;"></canvas>
-    </div>
-    
-    <div class="bottom-panel">
-      <div class="controls">
-        <button id="recordBtn">録画開始</button>
-        <button id="stopBtn">録画ストップ</button>
-      </div>
-      <div id="status" class="hide-during-rec"></div>
-      <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
-    </div>
+    <div id="status" class="hide-during-rec"></div>
+    <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
   </div>
 
   <script>
     const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
     let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
     const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
-    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), screenRotator = document.getElementById('screenRotator');
+    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), videoContainer = document.getElementById('videoContainer');
 
     async function initCamera() {
       try {
@@ -119,21 +111,18 @@
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
           let targetW = 1280;
-          let targetH = 720;
+          let targetH = 720; // 3:4にしたい場合は targetW = 960; targetH = 1280; に変更可
           if (canvas.width !== targetW || canvas.height !== targetH) {
             canvas.width = targetW;
             canvas.height = targetH;
           }
           ctx.clearRect(0, 0, targetW, targetH);
           ctx.save();
-          
-          // 録画用キャンバス側も正しい向き・反転で描画
-          ctx.translate(targetW / 2, targetH / 2);
-          ctx.rotate(-Math.PI / 2);
-          ctx.scale(-1, 1);
+          ctx.translate(targetW, 0);
+          ctx.scale(-1, 1); // 左右反転
           
           let sRatio = vW / vH;
-          let tRatio = targetH / targetW; // キャンバスの縦横比に合わせる
+          let tRatio = targetW / targetH;
           let sW, sH, sX, sY;
           if (sRatio > tRatio) {
             sH = vH; sW = vH * tRatio;
@@ -142,7 +131,7 @@
             sW = vW; sH = vW / tRatio;
             sX = 0; sY = (vH - sH) / 2;
           }
-          ctx.drawImage(preview, sX, sY, sW, sH, -targetH / 2, -targetW / 2, targetH, targetW);
+          ctx.drawImage(preview, sX, sY, sW, sH, 0, 0, targetW, targetH);
           ctx.restore();
         }
       }
@@ -151,7 +140,7 @@
 
     recordBtn.addEventListener('click', () => {
       recordedChunks = []; resultLink.style.display = 'none';
-      screenRotator.classList.add('recording-mode');
+      videoContainer.classList.add('recording-mode');
       drawFrame();
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
@@ -162,7 +151,7 @@
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         cancelAnimationFrame(animFrameId); clearInterval(countdownInterval); clearTimeout(timer); timerBadge.style.display = 'none';
-        screenRotator.classList.remove('recording-mode');
+        videoContainer.classList.remove('recording-mode');
         status.innerText = '送信中... ⏳'; recordBtn.style.display = 'none'; stopBtn.style.display = 'none';
         
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
