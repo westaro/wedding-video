@@ -12,50 +12,32 @@
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
       overflow: hidden; touch-action: manipulation;
-      display: flex; justify-content: center; align-items: center;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
     }
     
-    /* 全体を包むメインのステージ */
+    /* 全体を縦並び（上：カメラ、下：UI）にするコンテナ */
     .stage {
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
       width: 100%;
       height: 100%;
       padding: 20px;
     }
 
-    /* 【左側】録画ボタン（縦持ちのスマホに対して、横向きで正しく読めるよう配置） */
-    .left-controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    button {
-      padding: 14px 28px; font-size: 15px; border-radius: 35px;
-      border: none; cursor: pointer; font-weight: bold; 
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-      white-space: nowrap;
-    }
-    #recordBtn { background: #e55039; color: white; }
-    #stopBtn { background: #2f3542; color: white; display: none; }
-
-
-    /* 【中央】角丸でおしゃれなカメラボックス（縦長 3:4 または 9:16） */
+    /* 【上部】角丸でおしゃれなカメラボックス（縦長 3:4 または 9:16） */
     .video-card {
-      width: 100vw;
-      max-width: 320px; /* カードの横幅上限 */
+      width: 100%;
+      max-width: 340px;
       aspect-ratio: 3 / 4; /* カメラの縦横比（9:16にする場合は 9 / 16 に変更可能） */
-      max-height: 75vh;
+      max-height: 60vh;
       border-radius: 20px;
       overflow: hidden;
       background: #000;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
       position: relative;
       flex-shrink: 0;
     }
@@ -75,37 +57,60 @@
     }
 
 
-    /* 【右側】テキスト情報（スマホが縦のままでも、横向きの文字として綺麗に読めるよう配置） */
-    .right-info {
+    /* 【下部】1枚目の丸部分にすっぽり入る、横並びのUIカード */
+    .bottom-ui-card {
+      width: 100%;
+      max-width: 340px;
+      background: #ffffff;
+      padding: 16px 20px;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      justify-content: center;
-      gap: 6px;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
       flex-shrink: 0;
-      max-width: 140px;
     }
 
+    .text-group { 
+      display: flex; 
+      flex-direction: column; 
+      text-align: left; 
+    }
+    
     h2 { 
       color: #d4af37; 
-      margin: 0; 
-      font-size: 15px; 
+      margin: 0 0 4px 0; 
+      font-size: 14px; 
       font-weight: bold; 
-      line-height: 1.3;
     }
     
     p { 
       margin: 0; 
       font-size: 11px; 
       color: #555; 
-      line-height: 1.4;
     }
+    
+    .controls-group { 
+      display: flex; 
+      align-items: center; 
+    }
+
+    button {
+      padding: 12px 24px; font-size: 14px; border-radius: 30px;
+      border: none; cursor: pointer; font-weight: bold; 
+      box-shadow: 0 4px 12px rgba(229,80,57,0.3);
+      white-space: nowrap;
+    }
+    #recordBtn { background: #e55039; color: white; }
+    #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
       font-size: 11px; 
       font-weight: bold; 
       color: #333; 
       margin-top: 4px;
+      text-align: right;
     }
     
     #resultLink { 
@@ -114,6 +119,7 @@
       font-size: 11px; 
       display: block; 
       margin-top: 4px;
+      text-align: right;
     }
 
     .hide-during-rec { transition: opacity 0.2s; }
@@ -123,25 +129,29 @@
 <body>
   
   <div class="stage">
-    <!-- 左側：録画ボタンエリア -->
-    <div class="left-controls">
-      <button id="recordBtn">録画開始</button>
-      <button id="stopBtn">録画ストップ</button>
-    </div>
-
-    <!-- 中央：カメラプレビューカード（3:4 縦長） -->
+    <!-- 上部：カメラプレビューカード（3:4 縦長） -->
     <div class="video-card" id="videoCard">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
 
-    <!-- 右側：テキスト・ステータス案内エリア -->
-    <div class="right-info hide-during-rec" id="rightInfo">
-      <h2>Happy Wedding!</h2>
-      <p>📱 スマホを横に向けて撮影してください</p>
-      <div id="status"></div>
-      <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
+    <!-- 下部：カメラの下の余白に配置される横並びUIカード -->
+    <div class="bottom-ui-card hide-during-rec" id="bottomUiCard">
+      <div class="text-group">
+        <h2>Happy Wedding!</h2>
+        <p>📱 スマホを横に向けて撮影しよう</p>
+      </div>
+      
+      <div class="controls-group">
+        <button id="recordBtn">録画開始</button>
+        <button id="stopBtn">録画ストップ</button>
+      </div>
+      
+      <div>
+        <div id="status"></div>
+        <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
+      </div>
     </div>
   </div>
 
@@ -149,7 +159,7 @@
     const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
     let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
     const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
-    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), rightInfo = document.getElementById('rightInfo');
+    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), bottomUiCard = document.getElementById('bottomUiCard');
 
     async function initCamera() {
       try {
@@ -204,7 +214,7 @@
 
     recordBtn.addEventListener('click', () => {
       recordedChunks = []; resultLink.style.display = 'none';
-      rightInfo.classList.add('recording-mode');
+      bottomUiCard.classList.add('recording-mode');
       drawFrame();
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
@@ -215,7 +225,7 @@
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         cancelAnimationFrame(animFrameId); clearInterval(countdownInterval); clearTimeout(timer); timerBadge.style.display = 'none';
-        rightInfo.classList.remove('recording-mode');
+        bottomUiCard.classList.remove('recording-mode');
         status.innerText = '送信中... ⏳'; recordBtn.style.display = 'none'; stopBtn.style.display = 'none';
         
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
