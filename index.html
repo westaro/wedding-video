@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - Rotated 16:9</title>
+  <title>Wedding Message Booth - 16:9 Fixed</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -15,7 +15,7 @@
       overflow: hidden; touch-action: manipulation;
       display: flex; justify-content: center; align-items: center;
     }
-    /* スマホを横に構えたときに見やすくするための90度回転UI */
+    /* スマホ縦持ちでUIを90度回転させて横向きに見せるコンテナ */
     .screen-rotator {
       width: 100vh; height: 100vw;
       transform: rotate(90deg);
@@ -23,17 +23,18 @@
       position: absolute;
       display: flex; flex-direction: column;
       justify-content: space-between; align-items: center;
-      background: #fdfaf6; padding: 15px 10px;
+      background: #fdfaf6; padding: 15px;
     }
     .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
     h2 { color: #d4af37; margin: 0; font-size: 18px; }
     p { margin: 0; font-size: 13px; color: #555; }
     
-    /* 回転後の空間にぴったり収まる、黒帯なしの 16:9 コンテナ */
+    /* 16:9の比率を絶対に崩させないための厳密なサイズ指定 */
     .video-container {
-      width: 100%;
-      max-height: calc(100vh - 140px);
-      aspect-ratio: 16 / 9; /* 16:9 の比率を厳守 */
+      width: 78vh;  /* 回転後の横幅基準 */
+      height: 43.875vh; /* 78vh × (9/16) = 正確な16:9の高さ */
+      max-width: 90vw;
+      max-height: 50vw;
       border-radius: 16px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
@@ -43,7 +44,7 @@
     video { 
       width: 100%; 
       height: 100%; 
-      object-fit: cover; /* プレビュー側の黒帯を完全に排除 */
+      object-fit: cover; /* 黒帯を完全に排除して画面を埋める */
       transform: scaleX(-1); /* フロントカメラの左右反転 */
     }
 
@@ -116,7 +117,6 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 録画用キャンバスも完全な 16:9 (1280x720) に固定
           let targetW = 1280;
           let targetH = 720;
           if (canvas.width !== targetW || canvas.height !== targetH) {
@@ -126,9 +126,8 @@
           ctx.clearRect(0, 0, targetW, targetH);
           ctx.save();
           ctx.translate(targetW, 0);
-          ctx.scale(-1, 1); // 左右反転
+          ctx.scale(-1, 1);
           
-          // 黒帯を出さずに画面いっぱいに広げるクロップ（cover）計算
           let sRatio = vW / vH;
           let tRatio = targetW / targetH;
           let sW, sH, sX, sY;
