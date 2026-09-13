@@ -96,7 +96,6 @@
   <div class="video-container">
     <div id="timerBadge">残り 20秒</div>
     <video id="preview" autoplay muted playsinline></video>
-    <!-- 録画用に実際のプレビュー比率と完全に一致させるための隠しCanvas -->
     <canvas id="recordCanvas" style="display:none;"></canvas>
   </div>
   
@@ -131,12 +130,11 @@
     const resultLink = document.getElementById('resultLink');
 
     function getSupportedMimeType() {
+      // 互換性の高い順に配列を設定
       const types = [
-        'video/mp4;codecs=avc1.640028',
-        'video/mp4',
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm'
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4'
       ];
       for (const t of types) {
         if (MediaRecorder.isTypeSupported(t)) return t;
@@ -179,10 +177,8 @@
 
     initCamera();
 
-    // プレビューの見た目（反転なし・3:4の縦長比率）をそのままCanvasに毎フレーム描き込むループ
     function drawFrame() {
       if (preview.videoWidth && preview.videoHeight) {
-        // 常にプレビュー枠（3:4の縦長比率、例: 720×960）と完全一致させる
         const targetWidth = 720;
         const targetHeight = 960;
 
@@ -194,15 +190,12 @@
         ctx.clearRect(0, 0, targetWidth, targetHeight);
         ctx.save();
         
-        // プレビュー画面（transform: scaleX(-1)）と同様に左右反転を打ち消し、肉眼通りの正しい向きで焼き込む
         ctx.translate(targetWidth, 0);
         ctx.scale(-1, 1);
         
-        // 映像をコンテナの比率（object-fit: cover 相当）に合わせて美しく中央クロップ描画
         let vWidth = preview.videoWidth;
         let vHeight = preview.videoHeight;
         
-        // スマホセンサー特有の横向きデータで渡ってきた場合は縦横を入れ替えて扱う
         if (vWidth > vHeight) {
           let temp = vWidth;
           vWidth = vHeight;
@@ -235,7 +228,6 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      // 描画ループを開始し、Canvasから正しく補正されたストリームを作成
       drawFrame();
       const canvasStream = canvas.captureStream(30);
 
@@ -246,7 +238,7 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 4000000 };
+      const options = { videoBitsPerSecond: 2500000 };
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -293,13 +285,16 @@
             resultLink.href = result.secure_url;
             resultLink.style.display = 'block';
           } else {
-            console.error('Cloudinary Error:', result);
-            throw new Error(result.error ? result.error.message : '送信に失敗しました');
+            console.error('Cloudinary Detailed Error:', result);
+            // エラーメッセージを画面上にも詳細に出力
+            const errMsg = result.error && result.error.message ? result.error.message : JSON.stringify(result);
+            throw new Error(errMsg);
           }
         } catch (error) {
-          console.error(error);
-          status.innerText = '送信エラーが発生しました。設定を確認してください。';
+          console.error('Fetch Error:', error);
+          status.innerText = `送信エラー: ${error.message}`;
           status.style.color = 'red';
+          recordBtn.style.display = 'inline-block'; // エラー時に再試行できるようボタンを再表示
         }
       };
 
