@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - Final</title>
+  <title>Wedding Message Booth - Fix Camera</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -32,7 +32,7 @@
     /* 16:9の比率を厳密に保つコンテナ */
     .video-container {
       width: 78vh; 
-      height: 43.875vh; /* 78vh × (9/16) = 正確な16:9 */
+      height: 43.875vh;
       max-width: 90vw;
       max-height: 50vw;
       border-radius: 16px; overflow: hidden;
@@ -44,8 +44,8 @@
     video { 
       width: 100%; 
       height: 100%; 
-      object-fit: cover; /* 黒帯を完全に排除 */
-      transform: scaleX(-1); /* フロントカメラの左右反転のみ */
+      object-fit: cover; 
+      transform: scaleX(-1); /* 左右反転（鏡像）のみ */
     }
 
     #timerBadge {
@@ -97,19 +97,14 @@
 
     async function initCamera() {
       try {
-        // 通常のカメラの角度（横向き 1280x720）で取得
+        // 解像度を固定せず、デバイスの自然なカメラ入力を取得する
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, 
+          video: { facingMode: "user" }, 
           audio: true 
         });
         preview.srcObject = cameraStream;
-      } catch (e) {
-        try { 
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); 
-          preview.srcObject = cameraStream; 
-        } catch (err) { 
-          status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; 
-        }
+      } catch (err) { 
+        status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; 
       }
     }
     initCamera();
@@ -118,6 +113,7 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
+          // 録画用キャンバスの解像度を16:9に設定
           let targetW = 1280;
           let targetH = 720;
           if (canvas.width !== targetW || canvas.height !== targetH) {
@@ -127,10 +123,11 @@
           ctx.clearRect(0, 0, targetW, targetH);
           ctx.save();
           
-          // カメラ映像は回転させず、通常の向きのまま左右反転（鏡像）のみ適用して自然なアングルで描画
+          // 余計な回転を一切排除し、左右反転（鏡像）のみ適用
           ctx.translate(targetW, 0);
           ctx.scale(-1, 1);
           
+          // カメラ映像の自然な向きを維持したまま、16:9のフレームに中央クロップして描画
           let sRatio = vW / vH;
           let tRatio = targetW / targetH;
           let sW, sH, sX, sY;
