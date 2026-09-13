@@ -24,13 +24,10 @@
       align-items: center;
     }
 
-    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
+    /* 画面強制回転を外し、通常のコンテナレイアウトに変更 */
     .screen-rotator {
-      width: 100vh;
-      height: 100vw;
-      transform: rotate(90deg);
-      transform-origin: center center;
-      position: absolute;
+      width: 100vw;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -223,14 +220,12 @@
             canvas.height = vHeight;
           }
 
-          // 画面が90度回転（横向き表示）しているため、
-          // canvasへの描画時に270度（反時計回りに90度）回転させて向きを正常に直します
+          // スマホの向き（縦・横）に合わせて自然に映像を描画
           ctx.clearRect(0, 0, vWidth, vHeight);
           ctx.save();
-          ctx.translate(vWidth / 2, vHeight / 2);
-          ctx.rotate(-Math.PI / 2);
-          ctx.scale(-1, 1); // 鏡像反転の維持
-          ctx.drawImage(preview, -vHeight / 2, -vWidth / 2, vHeight, vWidth);
+          ctx.translate(vWidth, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(preview, 0, 0, vWidth, vHeight);
           ctx.restore();
         }
       }
