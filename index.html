@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - Fullscreen</title>
+  <title>Wedding Message Booth - 9:16 Full</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -15,6 +15,7 @@
       overflow: hidden; touch-action: manipulation;
       display: flex; justify-content: center; align-items: center;
     }
+    /* 画面全体を横向きにするコンテナ */
     .screen-rotator {
       width: 100vh; height: 100vw;
       transform: rotate(90deg);
@@ -25,25 +26,23 @@
       background: #fdfaf6; padding: 10px;
     }
     .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    h2 { color: #d4af37; margin: 0; font-size: 18px; }
-    p { margin: 0; font-size: 13px; color: #555; }
+    h2 { color: #d4af37; margin: 0; font-size: 16px; }
+    p { margin: 0; font-size: 12px; color: #555; }
     
-    /* 画面いっぱいに広げ、object-fit: cover で黒帯を完全に排除するコンテナ */
+    /* 9:16 の比率を厳密に保ち、黒帯を排除するコンテナ */
     .video-container {
       width: 100%;
-      flex-grow: 1;
-      max-height: calc(100vh - 120px);
-      aspect-ratio: 9 / 16; /* スマホ縦持ち基準で画面一杯にフィット */
+      max-width: 320px;
+      aspect-ratio: 9 / 16; /* 完全に 9:16 に固定 */
       border-radius: 16px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
-      margin: 5px 0;
     }
     
     video { 
       width: 100%; 
       height: 100%; 
-      object-fit: cover; /* プレビュー側の黒帯も強制的に排除 */
+      object-fit: cover; /* プレビュー側の黒帯・余白を完全になくす */
       transform: rotate(-90deg) scaleX(-1); 
     }
 
@@ -87,7 +86,7 @@
   </div>
   <script>
     const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
-    let mediaRecorder, recordedChunks = [], cameraStream, recordStream, animFrameId, timer, countdownInterval;
+    let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
     const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
     const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), screenRotator = document.getElementById('screenRotator');
 
@@ -96,8 +95,8 @@
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
-            width: { ideal: 1080 }, 
-            height: { ideal: 1920 }, 
+            width: { ideal: 720 }, 
+            height: { ideal: 1280 }, 
             frameRate: { ideal: 30 } 
           }, 
           audio: true 
@@ -118,9 +117,9 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // スマホ画面の解像度（縦向きベース）に合わせることで、録画データ自体にも黒帯が入らないようにする
-          let targetW = 1080;
-          let targetH = 1920;
+          // 録画データ側も厳密に 9:16（720x1280）に固定して黒帯を完全排除
+          let targetW = 720;
+          let targetH = 1280;
           if (canvas.width !== targetW || canvas.height !== targetH) {
             canvas.width = targetW;
             canvas.height = targetH;
@@ -131,7 +130,7 @@
           ctx.rotate(-Math.PI / 2);
           ctx.scale(-1, 1);
           
-          // 画面全体を隙間なく埋める（object-fit: cover と同じ切り出し計算）
+          // 画面全体を隙間なく埋めるスケーリング（余白が出ないようにカバー）
           let scale = Math.max(targetW / vH, targetH / vW);
           let dW = vH * scale;
           let dH = vW * scale;
@@ -149,7 +148,7 @@
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
       
-      try { mediaRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 2000000 }); } 
+      try { mediaRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 1500000 }); } 
       catch (e) { mediaRecorder = new MediaRecorder(canvasStream); }
 
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
