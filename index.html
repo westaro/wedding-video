@@ -223,11 +223,14 @@
             canvas.height = vHeight;
           }
 
+          // 画面が90度回転（横向き表示）しているため、
+          // canvasへの描画時に270度（反時計回りに90度）回転させて向きを正常に直します
           ctx.clearRect(0, 0, vWidth, vHeight);
           ctx.save();
-          ctx.translate(vWidth, 0);
-          ctx.scale(-1, 1);
-          ctx.drawImage(preview, 0, 0, vWidth, vHeight);
+          ctx.translate(vWidth / 2, vHeight / 2);
+          ctx.rotate(-Math.PI / 2);
+          ctx.scale(-1, 1); // 鏡像反転の維持
+          ctx.drawImage(preview, -vHeight / 2, -vWidth / 2, vHeight, vWidth);
           ctx.restore();
         }
       }
