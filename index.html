@@ -30,7 +30,7 @@
     .video-container {
       width: 100%;
       max-width: 380px;
-      aspect-ratio: 4 / 3;
+      aspect-ratio: 3 / 4; /* 横向き表示時に 4:3 になる縦横比 */
       border-radius: 16px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
@@ -94,13 +94,19 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          if (canvas.width !== vH || canvas.height !== vW) { canvas.width = vH; canvas.height = vW; }
+          // 4:3（横向き）の解像度に固定してキャンバスを作成（黒帯を発生させない）
+          let targetWidth = 1280;
+          let targetHeight = 960;
+          if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+          }
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.save();
           ctx.translate(canvas.width / 2, canvas.height / 2);
           ctx.rotate(-Math.PI / 2);
           ctx.scale(-1, 1);
-          ctx.drawImage(preview, -vW / 2, -vH / 2, vW, vH);
+          ctx.drawImage(preview, -vH / 2, -vW / 2, vH, vW);
           ctx.restore();
         }
       }
