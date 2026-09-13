@@ -24,10 +24,13 @@
       align-items: center;
     }
 
-    /* 画面を強制回転させる仕組みを外し、スマホの持ち方に自然に追従させます */
+    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
     .screen-rotator {
-      width: 100vw;
-      height: 100vh;
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      position: absolute;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -49,8 +52,8 @@
     
     .video-container {
       width: 100%;
-      max-width: 330px;
-      aspect-ratio: 3 / 4;
+      max-width: 420px;
+      aspect-ratio: 4 / 3;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -127,7 +130,7 @@
   <div class="screen-rotator" id="screenRotator">
     <div class="hide-during-rec">
       <h2>Happy Wedding!</h2>
-      <p>📱 縦向きで撮影してください</p>
+      <p>📱 横向きで撮影してください</p>
     </div>
     
     <div class="video-container">
@@ -185,8 +188,8 @@
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 960 },
-            height: { ideal: 1280 },
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
