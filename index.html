@@ -27,12 +27,12 @@
       padding: 16px;
     }
 
-    /* 【上部】カメラプレビューカード */
+    /* 【上部】縦長の長方形（3:4）に修正したカメラプレビューカード */
     .video-card {
       width: 100%;
-      max-width: 350px;
-      aspect-ratio: 3 / 4;
-      max-height: 50vh;
+      max-width: 380px;
+      aspect-ratio: 3 / 4; /* 縦長（3:4）の比率に修正 */
+      max-height: 60vh; /* 画面に収めるための最大高さ */
       border-radius: 20px;
       overflow: hidden;
       background: #000;
@@ -55,11 +55,11 @@
       display: none; z-index: 10;
     }
 
-    /* 【下部】黒枠部分まで大きく広げたUIカードエリア */
+    /* 【下部】UIカードエリア */
     .bottom-ui-container {
       width: 100%;
-      max-width: 350px;
-      height: 280px; /* 枠を広げて十分な高さを確保 */
+      max-width: 380px;
+      height: 240px; 
       background: #ffffff;
       border-radius: 20px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -71,21 +71,21 @@
       flex-shrink: 0;
     }
 
-    /* 90度回転させるラッパー（広げた枠にぴったり収まるようサイズを反転して一致させる） */
+    /* 90度回転（右側が上になる向き）＆ 左右反転の配置 */
     .rotated-ui-wrapper {
-      width: 280px;  /* コンテナの高さと同じ */
-      height: 350px; /* コンテナの幅と同じ */
-      transform: rotate(-90deg); /* スマホを横に構えた時にまっすぐ読める正しい向き */
+      width: 240px;  /* コンテナの高さに合わせる */
+      height: calc(100vw - 32px); /* 画面幅に合わせて可変 */
+      max-height: 380px; 
+      transform: rotate(90deg); /* 反対方向に回転（右側がテキストの上になる） */
       display: flex;
-      flex-direction: column; /* テキストの下にボタンを配置するための縦並び */
+      flex-direction: column; 
       justify-content: center;
       align-items: center;
       text-align: center;
-      gap: 24px; /* テキストとボタンの間の余白 */
+      gap: 24px; 
       padding: 20px;
     }
 
-    /* テキストグループ（枠内に収まるよう細かく改行） */
     .text-group { 
       display: flex; 
       flex-direction: column; 
@@ -149,14 +149,14 @@
     </div>
 
     <div class="bottom-ui-container" id="bottomUiContainer">
-      <!-- 横向きに構えた時のUI -->
       <div class="rotated-ui-wrapper hide-during-rec" id="rotatedUiWrapper">
-        
+        <!-- 90度回転により、こちらが右側（上）になります -->
         <div class="text-group">
           <h2>Happy Wedding!</h2>
           <p>📱スマホを<br>横に向けて<br>撮影しよう</p>
         </div>
         
+        <!-- こちらが左側（下）になります -->
         <div class="controls-group">
           <button id="recordBtn">録画開始</button>
           <button id="stopBtn">録画ストップ</button>
@@ -196,6 +196,7 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
+          // 録画データも3:4の縦長（960x1280）で作成
           let targetW = 960;
           let targetH = 1280;
           if (canvas.width !== targetW || canvas.height !== targetH) {
