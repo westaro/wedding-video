@@ -131,7 +131,9 @@
     const resultLink = document.getElementById('resultLink');
 
     function getSupportedMimeType() {
+      // 互換性の高い順にMIMEタイプを特定
       const types = [
+        'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
         'video/webm',
         'video/mp4'
@@ -171,7 +173,6 @@
 
     initCamera();
 
-    // 撮影時点のカメラの実際の縦横比（縦なら3:4、横なら4:3など）をそのままCanvasに反映するループ
     function drawFrame() {
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vWidth = preview.videoWidth;
@@ -186,7 +187,6 @@
           ctx.clearRect(0, 0, vWidth, vHeight);
           ctx.save();
           
-          // 鏡像反転を打ち消して肉眼通りの向きにする
           ctx.translate(vWidth, 0);
           ctx.scale(-1, 1);
           
@@ -211,7 +211,7 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 4000000 };
+      const options = { videoBitsPerSecond: 2500000 }; // 安定した転送レートに調整
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -237,6 +237,7 @@
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
+        // Blob生成時に明示的にMIMEタイプを指定（Cloudinaryが受理しやすい形式に補正）
         const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
         const blob = new Blob(recordedChunks, { type: actualType });
 
@@ -265,18 +266,20 @@
             resultLink.href = result.secure_url;
             resultLink.style.display = 'block';
           } else {
-            console.error('Cloudinary Error:', result);
-            throw new Error(result.error ? result.error.message : '送信に失敗しました');
+            console.error('Cloudinary Error Details:', result);
+            const errorMsg = result.error && result.error.message ? result.error.message : '不明なサーバーエラー';
+            throw new Error(errorMsg);
           }
         } catch (error) {
-          console.error('Upload Error:', error);
+          console.error('Upload Catch Error:', error);
           status.innerText = `送信エラー: ${error.message}`;
           status.style.color = 'red';
           recordBtn.style.display = 'inline-block';
         }
       };
 
-      mediaRecorder.start();
+      // 定期的にチャンクを回収するようタイムスライス（1秒ごと）を付与し、メモリ溢れやデータ欠損を防ぐ
+      mediaRecorder.start(1000);
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
 
