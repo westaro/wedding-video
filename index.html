@@ -13,21 +13,33 @@
       font-family: 'Helvetica Neue', Arial, sans-serif; 
       text-align: center; 
       background: #fdfaf6; 
-      padding: 15px; 
-      color: #333; 
       margin: 0;
+      padding: 10px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
       touch-action: manipulation;
     }
 
-    h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
-    p { margin-bottom: 15px; font-size: 14px; }
+    h2 { 
+      color: #d4af37; 
+      margin: 0 0 4px 0; 
+      font-size: 18px; 
+    }
+    p { 
+      margin: 0 0 10px 0; 
+      font-size: 13px; 
+      color: #555;
+    }
     
     .video-container {
       width: 100%;
-      max-width: 330px;
-      margin: 0 auto;
-      aspect-ratio: 3 / 4;
-      border-radius: 16px;
+      max-width: 480px;
+      aspect-ratio: 4 / 3;
+      border-radius: 14px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
@@ -38,30 +50,32 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      /* インカメラの左右反転（鏡像）を自然な向きに正す */
       transform: scaleX(-1);
     }
 
     #timerBadge {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: 10px;
+      right: 10px;
       background: rgba(255, 71, 87, 0.85);
       color: white;
-      padding: 6px 14px;
+      padding: 4px 12px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 13px;
       display: none;
       backdrop-filter: blur(4px);
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 10;
     }
 
-    .controls { margin-top: 20px; }
+    .controls { 
+      margin-top: 12px; 
+    }
+    
     button { 
-      padding: 15px 40px; 
-      font-size: 18px; 
+      padding: 12px 36px; 
+      font-size: 16px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -69,34 +83,36 @@
       transition: 0.3s; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+    
     #recordBtn { background: #e55039; color: white; }
     #recordBtn:active { background: #eb2f06; }
     #stopBtn { background: #2f3542; color: white; display: none; }
-    #status { margin-top: 15px; font-weight: bold; font-size: 15px; min-height: 24px; word-break: break-all; }
-    #resultLink { display: block; margin-top: 10px; color: #007bff; text-decoration: underline; font-weight: bold; }
-
-    @media screen and (orientation: landscape) {
-      body {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-      }
-      .video-container {
-        max-width: 260px;
-      }
+    
+    #status { 
+      margin-top: 8px; 
+      font-weight: bold; 
+      font-size: 14px; 
+      min-height: 20px; 
+      word-break: break-all; 
+    }
+    
+    #resultLink { 
+      display: block; 
+      margin-top: 6px; 
+      color: #007bff; 
+      text-decoration: underline; 
+      font-weight: bold; 
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
   <h2>Happy Wedding!</h2>
-  <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
+  <p>📱 スマホを横に向けて、お祝いメッセージをお願いします（最大20秒）</p>
   
   <div class="video-container">
     <div id="timerBadge">残り 20秒</div>
     <video id="preview" autoplay muted playsinline></video>
-    <!-- 撮影時の解像度・アスペクト比をそのまま維持して記録する隠しCanvas -->
     <canvas id="recordCanvas" style="display:none;"></canvas>
   </div>
   
@@ -131,9 +147,7 @@
     const resultLink = document.getElementById('resultLink');
 
     function getSupportedMimeType() {
-      // 互換性の高い順にMIMEタイプを特定
       const types = [
-        'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
         'video/webm',
         'video/mp4'
@@ -150,7 +164,7 @@
           video: { 
             facingMode: "user",
             width: { ideal: 1280 },
-            height: { ideal: 960 },
+            height: { ideal: 720 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -186,10 +200,8 @@
 
           ctx.clearRect(0, 0, vWidth, vHeight);
           ctx.save();
-          
           ctx.translate(vWidth, 0);
           ctx.scale(-1, 1);
-          
           ctx.drawImage(preview, 0, 0, vWidth, vHeight);
           ctx.restore();
         }
@@ -211,7 +223,7 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 2500000 }; // 安定した転送レートに調整
+      const options = { videoBitsPerSecond: 2500000 };
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -237,7 +249,6 @@
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
-        // Blob生成時に明示的にMIMEタイプを指定（Cloudinaryが受理しやすい形式に補正）
         const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
         const blob = new Blob(recordedChunks, { type: actualType });
 
@@ -278,7 +289,6 @@
         }
       };
 
-      // 定期的にチャンクを回収するようタイムスライス（1秒ごと）を付与し、メモリ溢れやデータ欠損を防ぐ
       mediaRecorder.start(1000);
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
