@@ -27,11 +27,11 @@
       padding: 16px;
     }
 
-    /* 【上部】一番広範囲が映る 9:16 の縦長フレーム */
+    /* 【上部】9:16の縦長比率に設定したカメラプレビューカード */
     .video-card {
       width: 100%;
       max-width: 380px;
-      aspect-ratio: 9 / 16; /* 9:16の比率に設定 */
+      aspect-ratio: 9 / 16; /* 9:16の縦長比率 */
       max-height: calc(100vh - 310px);
       border-radius: 20px;
       overflow: hidden;
@@ -71,7 +71,7 @@
       flex-shrink: 0;
     }
 
-    /* 90度回転（右側が上になる向き）＆ 左右反転の配置 */
+    /* 90度回転（右側が上、左側が下になる向き） */
     .rotated-ui-wrapper {
       width: 240px;  
       height: calc(100vw - 32px); 
@@ -150,11 +150,13 @@
 
     <div class="bottom-ui-container" id="bottomUiContainer">
       <div class="rotated-ui-wrapper hide-during-rec" id="rotatedUiWrapper">
+        <!-- 90度回転により、こちらが上側（テキスト）になります -->
         <div class="text-group">
           <h2>Happy Wedding!</h2>
           <p>📱スマホを<br>横に向けて<br>撮影しよう</p>
         </div>
         
+        <!-- こちらが下側（ボタン）になります -->
         <div class="controls-group">
           <button id="recordBtn">録画開始</button>
           <button id="stopBtn">録画ストップ</button>
@@ -173,7 +175,6 @@
 
     async function initCamera() {
       try {
-        // 9:16の比率に合わせた解像度（1080x1920）で要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
