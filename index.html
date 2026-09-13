@@ -27,11 +27,11 @@
       padding: 16px;
     }
 
-    /* 【上部】背景を広く写す 4:5 の縦長フレーム */
+    /* 【上部】一番広範囲が映る 9:16 の縦長フレーム */
     .video-card {
       width: 100%;
       max-width: 380px;
-      aspect-ratio: 4 / 5; /* 4:5の縦長比率 */
+      aspect-ratio: 9 / 16; /* 9:16の比率に設定 */
       max-height: calc(100vh - 310px);
       border-radius: 20px;
       overflow: hidden;
@@ -173,12 +173,12 @@
 
     async function initCamera() {
       try {
-        // 4:5の比率に合わせた解像度（1080x1350）で要求
+        // 9:16の比率に合わせた解像度（1080x1920）で要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
             width: { ideal: 1080 }, 
-            height: { ideal: 1350 }, 
+            height: { ideal: 1920 }, 
             frameRate: { ideal: 30 } 
           }, 
           audio: true 
@@ -199,9 +199,9 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 録画データも 4:5（864x1080）で生成
-          let targetW = 864;
-          let targetH = 1080;
+          // 録画データも 9:16（720x1280）で生成
+          let targetW = 720;
+          let targetH = 1280;
           if (canvas.width !== targetW || canvas.height !== targetH) {
             canvas.width = targetW;
             canvas.height = targetH;
