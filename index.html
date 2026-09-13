@@ -33,6 +33,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      /* 反転を無効化（撮影時の向きそのまま） */
       transform: none;
     }
 
@@ -112,10 +113,11 @@
 
     function getSupportedMimeType() {
       const types = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm',
-        'video/mp4'
+        'video/mp4;codecs=avc1.640028',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
       ];
       for (const t of types) {
         if (MediaRecorder.isTypeSupported(t)) return t;
@@ -125,66 +127,28 @@
 
     async function initCamera() {
       try {
-        // 縦長(3:4)の解像度を明示して取得
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: "user", 
-            width: { ideal: 720 }, 
-            height: { ideal: 960 } 
-          }, 
+          video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 960 } }, 
           audio: true 
         });
         preview.srcObject = cameraStream;
       } catch (err) {
-        try {
-          // フォールバック
-          cameraStream = await navigator.mediaDevices.getUserMedia({ 
-            video: true, 
-            audio: true 
-          });
-          preview.srcObject = cameraStream;
-        } catch (e) {
-          status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
-          status.style.color = 'red';
-        }
+        status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
+        status.style.color = 'red';
       }
     }
 
     initCamera();
 
-    // 映像の向き（縦横の逆転現象）を検知して自動補正してCanvasに焼き付ける処理
+    // 反転させずにそのままCanvasへ描き込む処理
     function drawFrame() {
-      if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
-        let vWidth = preview.videoWidth;
-        let vHeight = preview.videoHeight;
-
-        // スマホ側から横向きのストリームデータが渡ってきた場合でも強制的に縦長(3:4など)に補正して描画する
-        // 常に縦長のキャンバス解像度（例: 720x960）を維持
-        const targetWidth = 720;
-        const targetHeight = 960;
-
-        if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
+      if (preview.videoWidth && preview.videoHeight) {
+        if (canvas.width !== 720 || canvas.height !== 960) {
+          canvas.width = 720;
+          canvas.height = 960;
         }
-
-        ctx.clearRect(0, 0, targetWidth, targetHeight);
-
-        // カメラ映像の実際の向き（vWidth / vHeight）を判断し、横倒しになっていればアスペクト比を合わせて中央クロップ描画する
-        ctx.save();
-        
-        // 映像が横長（Width > Height）で届いてしまった場合の自動90度回転・スケーリング補正
-        if (vWidth > vHeight) {
-          ctx.translate(targetWidth / 2, targetHeight / 2);
-          ctx.rotate(Math.PI / 2);
-          // 縦横を入れ替えて描画
-          ctx.drawImage(preview, -targetHeight / 2, -targetWidth / 2, targetHeight, targetWidth);
-        } else {
-          // 通常の縦長
-          ctx.drawImage(preview, 0, 0, targetWidth, targetHeight);
-        }
-        
-        ctx.restore();
+        // scale(-1, 1)等の反転処理を入れず、ストリームの向きをそのまま描画
+        ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
       }
       animFrameId = requestAnimationFrame(drawFrame);
     }
@@ -206,11 +170,7 @@
       const options = { videoBitsPerSecond: 4000000 };
       if (mimeType) { options.mimeType = mimeType; }
 
-      try {
-        mediaRecorder = new MediaRecorder(recordStream, options);
-      } catch (e) {
-        mediaRecorder = new MediaRecorder(recordStream);
-      }
+      mediaRecorder = new MediaRecorder(recordStream, options);
 
       mediaRecorder.ondataavailable = e => {
         if (e.data && e.data.size > 0) {
