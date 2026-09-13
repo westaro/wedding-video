@@ -24,7 +24,7 @@
       align-items: center;
     }
 
-    /* スマホを横に構えた際に、文字やボタンを90度時計回りに回転させて横向きで読めるようにするコンテナ */
+    /* 画面全体を90度回転させて、スマホを横に持ったときに正しく読めるようにするコンテナ */
     .screen-rotator {
       width: 100vh;
       height: 100vw;
@@ -32,38 +32,24 @@
       transform-origin: center center;
       position: absolute;
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       justify-content: space-between;
       align-items: center;
       background: #fdfaf6;
-      padding: 20px;
+      padding: 15px;
     }
 
-    /* 左側のエリア（録画ボタンなど） */
-    .left-panel {
+    .top-panel {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 15px;
-      min-width: 140px;
-    }
-
-    /* 右側のエリア（Happy Wedding! と案内文） */
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-width: 140px;
-      text-align: center;
+      gap: 5px;
     }
 
     h2 { 
       color: #d4af37; 
-      margin: 0 0 5px 0; 
+      margin: 0; 
       font-size: 20px; 
-      writing-mode: horizontal-tb;
     }
     p { 
       margin: 0; 
@@ -73,8 +59,8 @@
     
     .video-container {
       width: 100%;
-      max-width: 330px;
-      aspect-ratio: 3 / 4;
+      max-width: 320px;
+      aspect-ratio: 3 / 4; /* ご指定の3:4比率 */
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -86,7 +72,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1);
+      /* カメラ映像を反時計回りに90度回転＋鏡像反転 */
+      transform: rotate(-90deg) scaleX(-1);
     }
 
     #timerBadge {
@@ -106,11 +93,11 @@
     }
 
     .controls { 
-      margin-top: 0; 
+      margin: 0; 
     }
     
     button { 
-      padding: 14px 30px; 
+      padding: 12px 35px; 
       font-size: 16px; 
       border-radius: 30px; 
       border: none; 
@@ -128,20 +115,19 @@
       margin-top: 5px; 
       font-weight: bold; 
       font-size: 12px; 
-      min-height: 20px; 
+      min-height: 18px; 
       word-break: break-all; 
     }
     
     #resultLink { 
       display: block; 
-      margin-top: 5px; 
+      margin-top: 3px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
       font-size: 12px;
     }
 
-    /* 撮影中に文字や案内を隠すクラス */
     .recording-mode .hide-during-rec {
       display: none !important;
     }
@@ -149,27 +135,27 @@
 </head>
 <body>
   <div class="screen-rotator" id="screenRotator">
-    <!-- 左側：録画ボタン・ステータス・リンク -->
-    <div class="left-panel">
-      <div class="controls">
-        <button id="recordBtn">録画開始</button>
-        <button id="stopBtn">録画ストップ</button>
-      </div>
-      <div id="status" class="hide-during-rec"></div>
-      <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
+    <!-- 上部：タイトルと案内 -->
+    <div class="top-panel hide-during-rec">
+      <h2>Happy Wedding!</h2>
+      <p>📱 横向きで撮影してください</p>
     </div>
-
+    
     <!-- 中央：カメラプレビュー -->
     <div class="video-container">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
-
-    <!-- 右側：タイトルと横向き撮影の案内文 -->
-    <div class="right-panel hide-during-rec">
-      <h2>Happy Wedding!</h2>
-      <p>📱 横向きで撮影してください</p>
+    
+    <!-- 下部：ボタン・ステータス -->
+    <div class="bottom-panel">
+      <div class="controls">
+        <button id="recordBtn">録画開始</button>
+        <button id="stopBtn">録画ストップ</button>
+      </div>
+      <div id="status" class="hide-during-rec"></div>
+      <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
     </div>
   </div>
 
@@ -244,16 +230,18 @@
         let vHeight = preview.videoHeight;
 
         if (vWidth > 0 && vHeight > 0) {
-          if (canvas.width !== vWidth || canvas.height !== vHeight) {
-            canvas.width = vWidth;
-            canvas.height = vHeight;
+          // キャンバスは横向き（縦横を反転）にして、反時計回り90度回転させた映像を焼き込む
+          if (canvas.width !== vHeight || canvas.height !== vWidth) {
+            canvas.width = vHeight;
+            canvas.height = vWidth;
           }
 
-          ctx.clearRect(0, 0, vWidth, vHeight);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.save();
-          ctx.translate(vWidth, 0);
-          ctx.scale(-1, 1);
-          ctx.drawImage(preview, 0, 0, vWidth, vHeight);
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(-Math.PI / 2); // 反時計回りに90度回転
+          ctx.scale(-1, 1); // 鏡像反転
+          ctx.drawImage(preview, -vWidth / 2, -vHeight / 2, vWidth, vHeight);
           ctx.restore();
         }
       }
