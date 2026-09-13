@@ -36,26 +36,26 @@
       justify-content: center;
       align-items: center;
       background: #fdfaf6;
-      padding: 10px;
+      padding: 15px;
     }
 
     h2 { 
       color: #d4af37; 
-      margin: 0 0 4px 0; 
-      font-size: 18px; 
+      margin: 0 0 5px 0; 
+      font-size: 20px; 
     }
     p { 
-      margin: 0 0 8px 0; 
-      font-size: 13px; 
+      margin: 0 0 10px 0; 
+      font-size: 14px; 
       color: #555;
     }
     
-    /* 初期状態のカメラ枠 */
+    /* カメラ枠を 16:9 に設定 */
     .video-container {
       width: 100%;
-      max-width: 320px;
-      aspect-ratio: 3 / 4;
-      max-height: calc(100vw - 110px);
+      max-width: 360px;
+      aspect-ratio: 16 / 9; /* 16:9に指定 */
+      max-height: calc(100vw - 120px);
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -63,12 +63,6 @@
       position: relative;
       flex-shrink: 1;
       transition: all 0.3s ease;
-    }
-
-    /* 録画開始時に「超縦長（9:19.5）」に変更 */
-    .video-container.aspect-ultra-tall {
-      aspect-ratio: 9 / 19.5 !important; /* より細長いアスペクト比 */
-      max-height: calc(100vw - 70px) !important;
     }
     
     video {
@@ -95,13 +89,13 @@
     }
 
     .controls { 
-      margin-top: 8px; 
+      margin-top: 12px; 
       flex-shrink: 0;
     }
     
     button { 
-      padding: 10px 32px; 
-      font-size: 15px; 
+      padding: 12px 36px; 
+      font-size: 16px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -115,7 +109,7 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 6px; 
+      margin-top: 8px; 
       font-weight: bold; 
       font-size: 13px; 
       min-height: 18px; 
@@ -124,7 +118,7 @@
     
     #resultLink { 
       display: block; 
-      margin-top: 4px; 
+      margin-top: 6px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
@@ -197,11 +191,12 @@
 
     async function initCamera() {
       try {
+        // 16:9（1280x720）を推奨設定
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 1080 },
-            height: { ideal: 2340 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -230,9 +225,9 @@
         let vHeight = preview.videoHeight;
 
         if (vWidth > 0 && vHeight > 0) {
-          // 超縦長 9:19.5 (1080x2340) で動画をクロップ生成
-          let targetWidth = 1080;
-          let targetHeight = 2340;
+          // 16:9（1280x720）で動画を保存
+          let targetWidth = 1280;
+          let targetHeight = 720;
 
           if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
             canvas.width = targetWidth;
@@ -271,9 +266,7 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      // 超縦長（9:19.5）クラスを追加
       screenRotator.classList.add('recording-mode');
-      videoContainer.classList.add('aspect-ultra-tall');
 
       drawFrame();
       const canvasStream = canvas.captureStream(30);
@@ -285,7 +278,7 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 3000000 };
+      const options = { videoBitsPerSecond: 2500000 };
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -307,7 +300,6 @@
         timerBadge.style.display = 'none';
 
         screenRotator.classList.remove('recording-mode');
-        videoContainer.classList.remove('aspect-ultra-tall');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
