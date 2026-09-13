@@ -24,7 +24,6 @@
       align-items: center;
     }
 
-    /* 画面全体を90度回転させて、スマホを横に持ったときに正しく読めるようにするコンテナ */
     .screen-rotator {
       width: 100vh;
       height: 100vw;
@@ -36,31 +35,31 @@
       justify-content: space-between;
       align-items: center;
       background: #fdfaf6;
-      padding: 15px;
+      padding: 12px;
     }
 
     .top-panel {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5px;
+      gap: 2px;
     }
 
     h2 { 
       color: #d4af37; 
       margin: 0; 
-      font-size: 20px; 
+      font-size: 18px; 
     }
     p { 
       margin: 0; 
-      font-size: 14px; 
+      font-size: 13px; 
       color: #555;
     }
     
     .video-container {
       width: 100%;
-      max-width: 320px;
-      aspect-ratio: 3 / 4; /* ご指定の3:4比率 */
+      max-width: 280px;
+      aspect-ratio: 9 / 16; /* 縦長（9:16）に設定して、横向き時に綺麗な長方形になるように調整 */
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -72,7 +71,6 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      /* カメラ映像を反時計回りに90度回転＋鏡像反転 */
       transform: rotate(-90deg) scaleX(-1);
     }
 
@@ -97,8 +95,8 @@
     }
     
     button { 
-      padding: 12px 35px; 
-      font-size: 16px; 
+      padding: 10px 30px; 
+      font-size: 15px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -112,7 +110,7 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 5px; 
+      margin-top: 3px; 
       font-weight: bold; 
       font-size: 12px; 
       min-height: 18px; 
@@ -121,7 +119,7 @@
     
     #resultLink { 
       display: block; 
-      margin-top: 3px; 
+      margin-top: 2px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
@@ -135,20 +133,17 @@
 </head>
 <body>
   <div class="screen-rotator" id="screenRotator">
-    <!-- 上部：タイトルと案内 -->
     <div class="top-panel hide-during-rec">
       <h2>Happy Wedding!</h2>
       <p>📱 横向きで撮影してください</p>
     </div>
     
-    <!-- 中央：カメラプレビュー -->
     <div class="video-container">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
     
-    <!-- 下部：ボタン・ステータス -->
     <div class="bottom-panel">
       <div class="controls">
         <button id="recordBtn">録画開始</button>
@@ -200,7 +195,7 @@
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 960 },
+            width: { ideal: 720 },
             height: { ideal: 1280 },
             frameRate: { ideal: 30 }
           }, 
@@ -230,7 +225,6 @@
         let vHeight = preview.videoHeight;
 
         if (vWidth > 0 && vHeight > 0) {
-          // キャンバスは横向き（縦横を反転）にして、反時計回り90度回転させた映像を焼き込む
           if (canvas.width !== vHeight || canvas.height !== vWidth) {
             canvas.width = vHeight;
             canvas.height = vWidth;
@@ -239,8 +233,8 @@
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.save();
           ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate(-Math.PI / 2); // 反時計回りに90度回転
-          ctx.scale(-1, 1); // 鏡像反転
+          ctx.rotate(-Math.PI / 2);
+          ctx.scale(-1, 1);
           ctx.drawImage(preview, -vWidth / 2, -vHeight / 2, vWidth, vHeight);
           ctx.restore();
         }
@@ -264,7 +258,9 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 2500000 };
+      const options = { 
+        videoBitsPerSecond: 1500000 // ビットレートを少し下げてファイルサイズを軽量化し、送信をスムーズに
+      };
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -292,6 +288,7 @@
         recordBtn.style.display = 'none';
         stopBtn.style.display = 'none';
 
+        // データをひとまとめにして即座にアップロード処理へ
         const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
         const blob = new Blob(recordedChunks, { type: actualType });
 
@@ -332,7 +329,8 @@
         }
       };
 
-      mediaRecorder.start(1000);
+      // タイムスライスを短く（250ms）してデータの細切れ保存を最適化
+      mediaRecorder.start(250);
       recordBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
 
