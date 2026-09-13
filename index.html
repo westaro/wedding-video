@@ -12,111 +12,41 @@
       margin: 0; padding: 0;
       width: 100vw; height: 100vh;
       overflow: hidden; touch-action: manipulation;
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
     }
     
-    .stage {
+    /* 画面全体を横向きレイアウト用のコンテナにする */
+    .landscape-stage {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 30px;
       width: 100%;
       height: 100%;
-      padding: 16px;
-    }
-
-    /* 【上部】9:16の縦長比率に設定したカメラプレビューカード */
-    .video-card {
-      width: 100%;
-      max-width: 380px;
-      aspect-ratio: 9 / 16; /* 9:16の縦長比率 */
-      max-height: calc(100vh - 310px);
-      border-radius: 20px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      position: relative;
-      flex-shrink: 1;
-    }
-    
-    video { 
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover; 
-      transform: scaleX(-1);
-    }
-
-    #timerBadge {
-      position: absolute; top: 12px; right: 12px;
-      background: rgba(255, 71, 87, 0.9); color: white;
-      padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 11px;
-      display: none; z-index: 10;
-    }
-
-    /* 【下部】UIカードエリア */
-    .bottom-ui-container {
-      width: 100%;
-      max-width: 380px;
-      height: 240px; 
-      background: #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    /* 90度回転（右側が上、左側が下になる向き） */
-    .rotated-ui-wrapper {
-      width: 240px;  
-      height: calc(100vw - 32px); 
-      max-height: 380px; 
-      transform: rotate(90deg); 
-      display: flex;
-      flex-direction: column; 
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      gap: 24px; 
       padding: 20px;
     }
 
-    .text-group { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center;
-    }
-    
-    h2 { 
-      color: #d4af37; 
-      margin: 0 0 8px 0; 
-      font-size: 20px; 
-      font-weight: bold; 
-    }
-    
-    p { 
-      margin: 0; 
-      font-size: 15px; 
-      color: #555; 
-      line-height: 1.6;
-    }
-    
-    .controls-group { 
-      display: flex; 
+    /* 【左側】ボタンエリア */
+    .left-ui-panel {
+      display: flex;
       flex-direction: column;
-      align-items: center; 
-      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
     }
 
     button {
-      padding: 14px 32px; font-size: 15px; border-radius: 30px;
-      border: none; cursor: pointer; font-weight: bold; 
-      box-shadow: 0 4px 12px rgba(229,80,57,0.3);
+      padding: 18px 36px; 
+      font-size: 16px; 
+      border-radius: 35px;
+      border: none; 
+      cursor: pointer; 
+      font-weight: bold; 
+      box-shadow: 0 6px 20px rgba(229,80,57,0.35);
       white-space: nowrap;
     }
     #recordBtn { background: #e55039; color: white; }
@@ -135,43 +65,100 @@
       display: block; 
     }
 
+    /* 【中央】9:16の縦長比率カメラプレビューカード */
+    .video-card {
+      width: auto;
+      height: 82vh; /* 画面の高さに合わせる */
+      aspect-ratio: 9 / 16; /* 9:16の比率を厳守 */
+      max-width: calc(100vw - 180px);
+      border-radius: 20px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    video { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+      transform: scaleX(-1);
+    }
+
+    #timerBadge {
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(255, 71, 87, 0.9); color: white;
+      padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12px;
+      display: none; z-index: 10;
+    }
+
+    /* 【右側】テキストエリア */
+    .right-text-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+      gap: 10px;
+      flex-shrink: 0;
+      padding: 10px;
+    }
+    
+    h2 { 
+      color: #d4af37; 
+      margin: 0; 
+      font-size: 22px; 
+      font-weight: bold; 
+      letter-spacing: 0.5px;
+    }
+    
+    p { 
+      margin: 0; 
+      font-size: 15px; 
+      color: #555; 
+      line-height: 1.5;
+    }
+
     .hide-during-rec { transition: opacity 0.2s; }
     .recording-mode .hide-during-rec { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
   
-  <div class="stage">
+  <div class="landscape-stage">
+    
+    <!-- 左側：録画ボタン等のコントロール -->
+    <div class="left-ui-panel hide-during-rec" id="leftUiPanel">
+      <div class="controls-group">
+        <button id="recordBtn">録画開始</button>
+        <button id="stopBtn">録画ストップ</button>
+        <div id="status"></div>
+        <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
+      </div>
+    </div>
+
+    <!-- 中央：9:16のカメラプレビュー -->
     <div class="video-card" id="videoCard">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
 
-    <div class="bottom-ui-container" id="bottomUiContainer">
-      <div class="rotated-ui-wrapper hide-during-rec" id="rotatedUiWrapper">
-        <!-- 90度回転により、こちらが上側（テキスト）になります -->
-        <div class="text-group">
-          <h2>Happy Wedding!</h2>
-          <p>📱スマホを<br>横に向けて<br>撮影しよう</p>
-        </div>
-        
-        <!-- こちらが下側（ボタン）になります -->
-        <div class="controls-group">
-          <button id="recordBtn">録画開始</button>
-          <button id="stopBtn">録画ストップ</button>
-          <div id="status"></div>
-          <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
-        </div>
-      </div>
+    <!-- 右側：テキストメッセージ -->
+    <div class="right-text-panel hide-during-rec" id="rightTextPanel">
+      <h2>Happy Wedding!</h2>
+      <p>📱スマホを横向きで<br>撮影してください</p>
     </div>
+
   </div>
 
   <script>
     const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
     let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
     const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
-    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), rotatedUiWrapper = document.getElementById('rotatedUiWrapper');
+    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink');
+    const leftUiPanel = document.getElementById('leftUiPanel'), rightTextPanel = document.getElementById('rightTextPanel');
 
     async function initCamera() {
       try {
@@ -231,7 +218,8 @@
 
     recordBtn.addEventListener('click', () => {
       recordedChunks = []; resultLink.style.display = 'none';
-      rotatedUiWrapper.classList.add('recording-mode');
+      leftUiPanel.classList.add('recording-mode');
+      rightTextPanel.classList.add('recording-mode');
       drawFrame();
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
@@ -242,7 +230,8 @@
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         cancelAnimationFrame(animFrameId); clearInterval(countdownInterval); clearTimeout(timer); timerBadge.style.display = 'none';
-        rotatedUiWrapper.classList.remove('recording-mode');
+        leftUiPanel.classList.remove('recording-mode');
+        rightTextPanel.classList.remove('recording-mode');
         status.innerText = '送信中... ⏳'; recordBtn.style.display = 'none'; stopBtn.style.display = 'none';
         
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
