@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - 16:9</title>
+  <title>Wedding Message Booth - Fullscreen</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -27,15 +27,26 @@
     .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
     h2 { color: #d4af37; margin: 0; font-size: 18px; }
     p { margin: 0; font-size: 13px; color: #555; }
+    
+    /* 画面いっぱいに広げ、object-fit: cover で黒帯を完全に排除するコンテナ */
     .video-container {
       width: 100%;
-      max-width: 380px;
-      aspect-ratio: 16 / 9; /* 横向きの16:9比率に正確に一致させる */
+      flex-grow: 1;
+      max-height: calc(100vh - 120px);
+      aspect-ratio: 9 / 16; /* スマホ縦持ち基準で画面一杯にフィット */
       border-radius: 16px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
+      margin: 5px 0;
     }
-    video { width: 100%; height: 100%; object-fit: cover; transform: rotate(-90deg) scaleX(-1); }
+    
+    video { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; /* プレビュー側の黒帯も強制的に排除 */
+      transform: rotate(-90deg) scaleX(-1); 
+    }
+
     #timerBadge {
       position: absolute; top: 10px; right: 10px;
       background: rgba(255, 71, 87, 0.85); color: white;
@@ -82,10 +93,23 @@
 
     async function initCamera() {
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true });
+        cameraStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "user", 
+            width: { ideal: 1080 }, 
+            height: { ideal: 1920 }, 
+            frameRate: { ideal: 30 } 
+          }, 
+          audio: true 
+        });
         preview.srcObject = cameraStream;
       } catch (e) {
-        try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); preview.srcObject = cameraStream; } catch (err) { status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; }
+        try { 
+          cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); 
+          preview.srcObject = cameraStream; 
+        } catch (err) { 
+          status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; 
+        }
       }
     }
     initCamera();
@@ -94,9 +118,9 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 16:9比率 (1280x720) でCanvasを固定して帯を排除
-          let targetW = 1280;
-          let targetH = 720;
+          // スマホ画面の解像度（縦向きベース）に合わせることで、録画データ自体にも黒帯が入らないようにする
+          let targetW = 1080;
+          let targetH = 1920;
           if (canvas.width !== targetW || canvas.height !== targetH) {
             canvas.width = targetW;
             canvas.height = targetH;
@@ -107,6 +131,7 @@
           ctx.rotate(-Math.PI / 2);
           ctx.scale(-1, 1);
           
+          // 画面全体を隙間なく埋める（object-fit: cover と同じ切り出し計算）
           let scale = Math.max(targetW / vH, targetH / vW);
           let dW = vH * scale;
           let dH = vW * scale;
@@ -124,7 +149,7 @@
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
       
-      try { mediaRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 1500000 }); } 
+      try { mediaRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 2000000 }); } 
       catch (e) { mediaRecorder = new MediaRecorder(canvasStream); }
 
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
