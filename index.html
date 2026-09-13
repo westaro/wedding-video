@@ -14,13 +14,29 @@
       text-align: center; 
       background: #fdfaf6; 
       margin: 0;
-      padding: 15px;
-      min-height: 100vh;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
+    .screen-rotator {
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      position: absolute;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      touch-action: manipulation;
+      background: #fdfaf6;
+      padding: 15px;
     }
 
     h2 { 
@@ -111,10 +127,10 @@
   </style>
 </head>
 <body>
-  <div id="mainWrapper" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+  <div class="screen-rotator" id="screenRotator">
     <div class="hide-during-rec">
       <h2>Happy Wedding!</h2>
-      <p>📱 縦向きで撮影してください</p>
+      <p>📱 横向きで撮影してください</p>
     </div>
     
     <div class="video-container">
@@ -153,7 +169,7 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
     const resultLink = document.getElementById('resultLink');
-    const mainWrapper = document.getElementById('mainWrapper');
+    const screenRotator = document.getElementById('screenRotator');
 
     function getSupportedMimeType() {
       const types = [
@@ -223,7 +239,7 @@
       resultLink.style.display = 'none';
 
       // 撮影中は文字やタイトルを非表示にする
-      mainWrapper.classList.add('recording-mode');
+      screenRotator.classList.add('recording-mode');
 
       drawFrame();
       const canvasStream = canvas.captureStream(30);
@@ -257,7 +273,7 @@
         timerBadge.style.display = 'none';
 
         // 送信処理中は文字エリアを再表示してステータスを見せる
-        mainWrapper.classList.remove('recording-mode');
+        screenRotator.classList.remove('recording-mode');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
