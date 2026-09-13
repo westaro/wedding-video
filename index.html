@@ -14,34 +14,74 @@
       overflow: hidden; touch-action: manipulation;
       display: flex; flex-direction: column;
       justify-content: space-between; align-items: center;
-      padding: 12px 16px;
+      padding: 10px;
     }
     
-    /* 上部：テキストエリア（完全に収まるスッキリした横書き） */
-    .top-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 2px;
+    /* 【上部エリア】テキストとボタンを「横向きで読めるよう90度回転」させるコンテナ */
+    .rotated-header-box {
       width: 100%;
-      z-index: 10;
+      height: 22vh; /* 画面の上の約22% */
+      background: #f7f3ec;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    h2 { color: #d4af37; margin: 0; font-size: 16px; font-weight: bold; }
-    p { margin: 0; font-size: 11px; color: #666; }
 
-    /* 中央：カメラエリア（比率 9:16 または 3:4 を厳守、画面内に綺麗に収める） */
+    /* 90度回転させて、縦持ちでも横向きの文字・ボタンとして正しく機能する内部ボックス */
+    .rotated-content {
+      width: 22vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+    }
+
+    .text-group { display: flex; flex-direction: column; text-align: left; }
+    h2 { color: #d4af37; margin: 0; font-size: 14px; line-height: 1.2; font-weight: bold; }
+    p { margin: 0; font-size: 10px; color: #555; }
+    
+    .controls-group { display: flex; align-items: center; gap: 10px; }
+    button {
+      padding: 8px 24px; font-size: 13px; border-radius: 20px;
+      border: none; cursor: pointer; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+    #recordBtn { background: #e55039; color: white; }
+    #stopBtn { background: #2f3542; color: white; display: none; }
+    
+    #status { font-size: 10px; font-weight: bold; min-height: 12px; color: #333; text-align: right; }
+    #resultLink { color: #007bff; text-decoration: underline; font-size: 10px; display: block; text-align: right; }
+
+
+    /* 【下部エリア】カメラプレビュー（回転なし・綺麗な縦長 9:16 または 3:4） */
+    .camera-section {
+      width: 100%;
+      height: 75vh; /* 画面の残りの約75% */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
     .video-container {
       width: 100%;
       max-width: 400px;
-      aspect-ratio: 9 / 16; /* 縦長9:16の比率（3:4にする場合は 3 / 4 に変更可能） */
-      max-height: 62vh;
+      aspect-ratio: 9 / 16; /* 縦長9:16（3:4にしたい場合は 3 / 4 に変更可能） */
+      height: 100%;
+      max-height: 73vh;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 6px 20px rgba(0,0,0,0.15);
       position: relative;
-      margin: auto 0;
     }
     
     video { 
@@ -58,64 +98,49 @@
       display: none; z-index: 10;
     }
 
-    /* 下部：操作ボタンとステータス */
-    .bottom-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      width: 100%;
-      z-index: 10;
-    }
-
-    button {
-      padding: 10px 32px; font-size: 15px; border-radius: 30px;
-      border: none; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-    #recordBtn { background: #e55039; color: white; }
-    #stopBtn { background: #2f3542; color: white; display: none; }
-    
-    #status { font-size: 11px; font-weight: bold; min-height: 14px; color: #333; }
-    #resultLink { color: #007bff; text-decoration: underline; font-size: 11px; display: none; }
-
     .hide-during-rec { transition: opacity 0.2s; }
     .recording-mode .hide-during-rec { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
   
-  <!-- 上部：テキスト案内 -->
-  <div class="top-section hide-during-rec" id="topSection">
-    <h2>Happy Wedding!</h2>
-    <p>スマホを縦に向けてメッセージを残そう✨</p>
-  </div>
-  
-  <!-- 中央：カメラプレビュー（9:16 縦長） -->
-  <div class="video-container" id="videoContainer">
-    <div id="timerBadge">残り 20秒</div>
-    <video id="preview" autoplay muted playsinline></video>
-    <canvas id="recordCanvas" style="display:none;"></canvas>
-  </div>
-  
-  <!-- 下部：ボタン・ステータス -->
-  <div class="bottom-section" id="bottomSection">
-    <div class="controls">
-      <button id="recordBtn">録画開始</button>
-      <button id="stopBtn">録画ストップ</button>
+  <!-- 上部：横向きで読めるように90度回転させたテキスト・ボタンエリア -->
+  <div class="rotated-header-box" id="headerBox">
+    <div class="rotated-content">
+      <div class="text-group hide-during-rec">
+        <h2>Happy Wedding!</h2>
+        <p>📱 スマホを横に向けて大勢で撮影しよう</p>
+      </div>
+      
+      <div class="controls-group">
+        <button id="recordBtn">録画開始</button>
+        <button id="stopBtn">録画ストップ</button>
+      </div>
+      
+      <div class="hide-during-rec">
+        <div id="status"></div>
+        <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
+      </div>
     </div>
-    <div id="status" class="hide-during-rec"></div>
-    <a id="resultLink" href="" target="_blank" class="hide-during-rec">🎥 保存された動画を確認する</a>
+  </div>
+  
+  <!-- 下部：通常の縦長カメラプレビューエリア（9:16） -->
+  <div class="camera-section">
+    <div class="video-container" id="videoContainer">
+      <div id="timerBadge">残り 20秒</div>
+      <video id="preview" autoplay muted playsinline></video>
+      <canvas id="recordCanvas" style="display:none;"></canvas>
+    </div>
   </div>
 
   <script>
     const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
     let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
     const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
-    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), videoContainer = document.getElementById('videoContainer'), topSection = document.getElementById('topSection'), bottomSection = document.getElementById('bottomSection');
+    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink'), headerBox = document.getElementById('headerBox');
 
     async function initCamera() {
       try {
-        // 縦長（9:16）の解像度ベースでカメラを取得
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } }, 
           audio: true 
@@ -166,8 +191,7 @@
 
     recordBtn.addEventListener('click', () => {
       recordedChunks = []; resultLink.style.display = 'none';
-      topSection.classList.add('recording-mode');
-      bottomSection.classList.add('recording-mode');
+      headerBox.classList.add('recording-mode');
       drawFrame();
       const canvasStream = canvas.captureStream(30);
       if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
@@ -178,8 +202,7 @@
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         cancelAnimationFrame(animFrameId); clearInterval(countdownInterval); clearTimeout(timer); timerBadge.style.display = 'none';
-        topSection.classList.remove('recording-mode');
-        bottomSection.classList.remove('recording-mode');
+        headerBox.classList.remove('recording-mode');
         status.innerText = '送信中... ⏳'; recordBtn.style.display = 'none'; stopBtn.style.display = 'none';
         
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
@@ -188,11 +211,11 @@
           const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, { method: 'POST', body: formData });
           const json = await res.json();
           if (res.ok && json.secure_url) {
-            status.innerText = '送信完了！ありがとうございました🎉'; status.style.color = '#2ed573';
-            resultLink.href = json.secure_url; resultLink.style.display = 'inline-block';
+            status.innerText = '送信完了！🎉'; status.style.color = '#2ed573';
+            resultLink.href = json.secure_url; resultLink.style.display = 'inline';
           } else { throw new Error(json.error?.message || 'エラー'); }
         } catch (err) {
-          status.innerText = `送信エラー: ${err.message}`; status.style.color = 'red'; recordBtn.style.display = 'inline-block';
+          status.innerText = `エラー: ${err.message}`; status.style.color = 'red'; recordBtn.style.display = 'inline-block';
         }
       };
 
