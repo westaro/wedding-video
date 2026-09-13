@@ -27,12 +27,12 @@
       padding: 16px;
     }
 
-    /* 【上部】最も広角に映りやすい 4:3 の長方形フレーム */
+    /* 【上部】背景を広く写す 4:5 の縦長フレーム */
     .video-card {
       width: 100%;
       max-width: 380px;
-      aspect-ratio: 4 / 3; /* 4:3に変更し、より横方向を広く確保 */
-      max-height: 50vh;
+      aspect-ratio: 4 / 5; /* 4:5の縦長比率 */
+      max-height: calc(100vh - 310px);
       border-radius: 20px;
       overflow: hidden;
       background: #000;
@@ -173,12 +173,12 @@
 
     async function initCamera() {
       try {
-        // 4:3の広角センサー比率に合わせた解像度（1280x960）で要求
+        // 4:5の比率に合わせた解像度（1080x1350）で要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
-            width: { ideal: 1280 }, 
-            height: { ideal: 960 }, 
+            width: { ideal: 1080 }, 
+            height: { ideal: 1350 }, 
             frameRate: { ideal: 30 } 
           }, 
           audio: true 
@@ -199,8 +199,8 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 録画データも 4:3（1440x1080）で生成
-          let targetW = 1440;
+          // 録画データも 4:5（864x1080）で生成
+          let targetW = 864;
           let targetH = 1080;
           if (canvas.width !== targetW || canvas.height !== targetH) {
             canvas.width = targetW;
