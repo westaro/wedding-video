@@ -14,29 +14,13 @@
       text-align: center; 
       background: #fdfaf6; 
       margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      touch-action: manipulation;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
-    .screen-rotator {
-      width: 100vh;
-      height: 100vw;
-      transform: rotate(90deg);
-      transform-origin: center center;
-      position: absolute;
+      padding: 15px;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background: #fdfaf6;
-      padding: 15px;
+      touch-action: manipulation;
     }
 
     h2 { 
@@ -52,8 +36,8 @@
     
     .video-container {
       width: 100%;
-      max-width: 420px;
-      aspect-ratio: 4 / 3;
+      max-width: 330px;
+      aspect-ratio: 3 / 4;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -70,14 +54,14 @@
 
     #timerBadge {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 12px;
+      right: 12px;
       background: rgba(255, 71, 87, 0.85);
       color: white;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 13px;
+      font-size: 14px;
       display: none;
       backdrop-filter: blur(4px);
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -85,11 +69,11 @@
     }
 
     .controls { 
-      margin-top: 15px; 
+      margin-top: 20px; 
     }
     
     button { 
-      padding: 14px 40px; 
+      padding: 15px 40px; 
       font-size: 18px; 
       border-radius: 30px; 
       border: none; 
@@ -104,33 +88,32 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 10px; 
+      margin-top: 15px; 
       font-weight: bold; 
-      font-size: 14px; 
-      min-height: 20px; 
+      font-size: 15px; 
+      min-height: 24px; 
       word-break: break-all; 
     }
     
     #resultLink { 
       display: block; 
-      margin-top: 8px; 
+      margin-top: 10px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
-      font-size: 14px;
+      font-size: 15px;
     }
 
-    /* 撮影中に文字や案内を隠すクラス */
     .recording-mode .hide-during-rec {
       display: none !important;
     }
   </style>
 </head>
 <body>
-  <div class="screen-rotator" id="screenRotator">
+  <div id="mainWrapper" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
     <div class="hide-during-rec">
       <h2>Happy Wedding!</h2>
-      <p>📱 横向きで撮影してください</p>
+      <p>📱 縦向きでお祝いメッセージをお願いします（最大20秒）</p>
     </div>
     
     <div class="video-container">
@@ -169,7 +152,7 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
     const resultLink = document.getElementById('resultLink');
-    const screenRotator = document.getElementById('screenRotator');
+    const mainWrapper = document.getElementById('mainWrapper');
 
     function getSupportedMimeType() {
       const types = [
@@ -188,8 +171,8 @@
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
+            width: { ideal: 960 },
+            height: { ideal: 1280 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -238,8 +221,7 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      // 撮影中は文字やタイトルを非表示にする
-      screenRotator.classList.add('recording-mode');
+      mainWrapper.classList.add('recording-mode');
 
       drawFrame();
       const canvasStream = canvas.captureStream(30);
@@ -272,8 +254,7 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        // 送信処理中は文字エリアを再表示してステータスを見せる
-        screenRotator.classList.remove('recording-mode');
+        mainWrapper.classList.remove('recording-mode');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
