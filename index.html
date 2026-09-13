@@ -17,16 +17,16 @@
       align-items: center;
     }
     
-    /* 画面全体を横向きレイアウト用のコンテナにする */
+    /* 画面全体を横向きレイアウト用のステージにする */
     .landscape-stage {
       display: flex;
       flex-direction: row;
       justify-content: center;
       align-items: center;
-      gap: 30px;
+      gap: 32px;
       width: 100%;
       height: 100%;
-      padding: 20px;
+      padding: 16px;
     }
 
     /* 【左側】ボタンエリア */
@@ -37,11 +37,13 @@
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
+      width: 160px;
+      text-align: center;
     }
 
     button {
-      padding: 18px 36px; 
-      font-size: 16px; 
+      padding: 16px 28px; 
+      font-size: 15px; 
       border-radius: 35px;
       border: none; 
       cursor: pointer; 
@@ -65,12 +67,10 @@
       display: block; 
     }
 
-    /* 【中央】9:16の縦長比率カメラプレビューカード */
+    /* 【中央】9:16の比率を厳守したカメラプレビューカード */
     .video-card {
-      width: auto;
-      height: 82vh; /* 画面の高さに合わせる */
-      aspect-ratio: 9 / 16; /* 9:16の比率を厳守 */
-      max-width: calc(100vw - 180px);
+      height: 85vh; /* 画面の高さに合わせる */
+      aspect-ratio: 9 / 16; /* 9:16の縦長比率 */
       border-radius: 20px;
       overflow: hidden;
       background: #000;
@@ -82,7 +82,7 @@
     video { 
       width: 100%; 
       height: 100%; 
-      object-fit: cover; 
+      object-fit: cover; /* 画面いっぱいに広角で映す */
       transform: scaleX(-1);
     }
 
@@ -102,20 +102,21 @@
       text-align: left;
       gap: 10px;
       flex-shrink: 0;
+      width: 180px;
       padding: 10px;
     }
     
     h2 { 
       color: #d4af37; 
       margin: 0; 
-      font-size: 22px; 
+      font-size: 20px; 
       font-weight: bold; 
       letter-spacing: 0.5px;
     }
     
     p { 
       margin: 0; 
-      font-size: 15px; 
+      font-size: 14px; 
       color: #555; 
       line-height: 1.5;
     }
@@ -162,6 +163,7 @@
 
     async function initCamera() {
       try {
+        // 広角センサー・高解像度（9:16比率）で要求
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user", 
@@ -187,7 +189,7 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 録画データも 9:16（720x1280）で生成
+          // 録画データも綺麗な 9:16（720x1280）で生成
           let targetW = 720;
           let targetH = 1280;
           if (canvas.width !== targetW || canvas.height !== targetH) {
