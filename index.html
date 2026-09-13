@@ -21,18 +21,18 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       width: 100%;
       height: 100%;
       padding: 16px;
     }
 
-    /* 【上部】カメラプレビューカード（縦長 3:4） */
+    /* 【上部】カメラプレビューカード */
     .video-card {
       width: 100%;
-      max-width: 380px;
+      max-width: 350px;
       aspect-ratio: 3 / 4;
-      max-height: 54vh;
+      max-height: 50vh;
       border-radius: 20px;
       overflow: hidden;
       background: #000;
@@ -55,14 +55,13 @@
       display: none; z-index: 10;
     }
 
-
-    /* 【下部】画面幅ギリギリまで広げたUIカードエリア */
+    /* 【下部】黒枠部分まで大きく広げたUIカードエリア */
     .bottom-ui-container {
       width: 100%;
-      max-width: 380px;
-      height: 100px; /* 横向きUIをゆったり収める高さ */
+      max-width: 350px;
+      height: 280px; /* 枠を広げて十分な高さを確保 */
       background: #ffffff;
-      border-radius: 18px;
+      border-radius: 20px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       display: flex;
       justify-content: center;
@@ -72,48 +71,50 @@
       flex-shrink: 0;
     }
 
-    /* 90度回転させるラッパー（カードの長さに合わせて完全にフィット） */
+    /* 90度回転させるラッパー（広げた枠にぴったり収まるようサイズを反転して一致させる） */
     .rotated-ui-wrapper {
-      width: 100px;
-      height: 380px;
-      transform: rotate(90deg);
-      transform-origin: center center;
+      width: 280px;  /* コンテナの高さと同じ */
+      height: 350px; /* コンテナの幅と同じ */
+      transform: rotate(-90deg); /* スマホを横に構えた時にまっすぐ読める正しい向き */
       display: flex;
-      justify-content: space-between;
+      flex-direction: column; /* テキストの下にボタンを配置するための縦並び */
+      justify-content: center;
       align-items: center;
-      padding: 0 16px;
+      text-align: center;
+      gap: 24px; /* テキストとボタンの間の余白 */
+      padding: 20px;
     }
 
+    /* テキストグループ（枠内に収まるよう細かく改行） */
     .text-group { 
       display: flex; 
       flex-direction: column; 
-      text-align: left; 
-      justify-content: center;
+      align-items: center;
     }
     
     h2 { 
       color: #d4af37; 
-      margin: 0 0 2px 0; 
-      font-size: 13px; 
+      margin: 0 0 8px 0; 
+      font-size: 20px; 
       font-weight: bold; 
-      white-space: nowrap; 
     }
     
     p { 
       margin: 0; 
-      font-size: 10px; 
+      font-size: 15px; 
       color: #555; 
-      line-height: 1.3;
-      white-space: nowrap; 
+      line-height: 1.6;
     }
     
     .controls-group { 
       display: flex; 
+      flex-direction: column;
       align-items: center; 
+      gap: 8px;
     }
 
     button {
-      padding: 10px 22px; font-size: 13px; border-radius: 25px;
+      padding: 14px 32px; font-size: 15px; border-radius: 30px;
       border: none; cursor: pointer; font-weight: bold; 
       box-shadow: 0 4px 12px rgba(229,80,57,0.3);
       white-space: nowrap;
@@ -122,20 +123,16 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      font-size: 10px; 
+      font-size: 12px; 
       font-weight: bold; 
       color: #333; 
-      text-align: right;
-      white-space: nowrap;
     }
     
     #resultLink { 
       color: #007bff; 
       text-decoration: underline; 
-      font-size: 10px; 
+      font-size: 12px; 
       display: block; 
-      text-align: right;
-      white-space: nowrap;
     }
 
     .hide-during-rec { transition: opacity 0.2s; }
@@ -145,30 +142,28 @@
 <body>
   
   <div class="stage">
-    <!-- 上部：カメラプレビューカード -->
     <div class="video-card" id="videoCard">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
 
-    <!-- 下部：画面幅いっぱいに広がり、中身が綺麗に収まるUIカード -->
     <div class="bottom-ui-container" id="bottomUiContainer">
+      <!-- 横向きに構えた時のUI -->
       <div class="rotated-ui-wrapper hide-during-rec" id="rotatedUiWrapper">
+        
         <div class="text-group">
           <h2>Happy Wedding!</h2>
-          <p>📱 スマホを横に向けて<br>撮影しよう</p>
+          <p>📱スマホを<br>横に向けて<br>撮影しよう</p>
         </div>
         
         <div class="controls-group">
           <button id="recordBtn">録画開始</button>
           <button id="stopBtn">録画ストップ</button>
-        </div>
-        
-        <div>
           <div id="status"></div>
           <a id="resultLink" href="" target="_blank" style="display: none;">🎥 動画を確認</a>
         </div>
+        
       </div>
     </div>
   </div>
