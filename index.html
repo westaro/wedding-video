@@ -3,174 +3,242 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - 4:3</title>
+  <title>Wedding Message Booth</title>
   <style>
-    * { box-sizing: border-box; }
     body { 
       font-family: 'Helvetica Neue', Arial, sans-serif; 
       text-align: center; 
       background: #fdfaf6; 
-      margin: 0; padding: 0;
-      width: 100vw; height: 100vh;
-      overflow: hidden; touch-action: manipulation;
-      display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-      padding: 15px 10px;
+      padding: 15px; 
+      color: #333; 
     }
-    .top-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    h2 { color: #d4af37; margin: 0; font-size: 18px; }
-    p { margin: 0; font-size: 13px; color: #555; }
+    h2 { color: #d4af37; margin-bottom: 5px; margin-top: 10px; }
+    p { margin-bottom: 15px; font-size: 14px; }
     
-    /* 4:3専用の完全固定コンテナ */
     .video-container {
       width: 100%;
-      max-width: min(92vw, calc((100vh - 160px) * (4 / 3)));
-      aspect-ratio: 4 / 3;
-      border-radius: 16px; overflow: hidden;
-      background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      max-width: 330px; /* 3:4の縦長が見やすく収まる幅 */
+      margin: 0 auto;
+      aspect-ratio: 3 / 4; /* 3:4 (縦長) に指定 */
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
-      margin: auto 0;
     }
     
-    video { 
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover; 
-      transform: scaleX(-1); 
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     #timerBadge {
-      position: absolute; top: 10px; right: 10px;
-      background: rgba(255, 71, 87, 0.85); color: white;
-      padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 13px;
-      display: none; z-index: 10;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 71, 87, 0.85);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+      display: none;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .controls { margin: 0; }
-    button {
-      padding: 12px 35px; font-size: 16px; border-radius: 30px;
-      border: none; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+    .controls { margin-top: 20px; }
+    button { 
+      padding: 15px 40px; 
+      font-size: 18px; 
+      border-radius: 30px; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: bold; 
+      transition: 0.3s; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     #recordBtn { background: #e55039; color: white; }
+    #recordBtn:active { background: #eb2f06; }
     #stopBtn { background: #2f3542; color: white; display: none; }
-    #status { margin-top: 5px; font-weight: bold; font-size: 13px; min-height: 18px; }
-    #resultLink { display: block; margin-top: 4px; color: #007bff; text-decoration: underline; font-size: 13px; }
-    .recording-mode .hide-during-rec { display: none !important; }
+    #status { margin-top: 15px; font-weight: bold; font-size: 15px; min-height: 24px; word-break: break-all; }
+    #resultLink { display: block; margin-top: 10px; color: #007bff; text-decoration: underline; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="top-panel hide-during-rec">
-    <h2>Happy Wedding!</h2>
-    <p>📱 横向きのまま撮影してください</p>
-  </div>
+  <h2>Happy Wedding!</h2>
+  <p>お祝いメッセージをお願いします🎥（最大20秒）</p>
   
   <div class="video-container">
     <div id="timerBadge">残り 20秒</div>
     <video id="preview" autoplay muted playsinline></video>
-    <canvas id="recordCanvas" style="display:none;"></canvas>
   </div>
   
-  <div class="bottom-panel">
-    <div class="controls">
-      <button id="recordBtn">録画開始</button>
-      <button id="stopBtn">録画ストップ</button>
-    </div>
-    <div id="status" class="hide-during-rec"></div>
-    <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
+  <div class="controls">
+    <button id="recordBtn">録画開始</button>
+    <button id="stopBtn">録画ストップ</button>
   </div>
+  <div id="status"></div>
+  <a id="resultLink" href="" target="_blank" style="display: none;">🎥 保存された動画を確認する</a>
 
   <script>
-    const cloudName = 'wf1qutrj'; const uploadPreset = 'jr3hrfi9';
-    let mediaRecorder, recordedChunks = [], cameraStream, animFrameId, timer, countdownInterval;
-    const maxTime = 20, preview = document.getElementById('preview'), canvas = document.getElementById('recordCanvas'), ctx = canvas.getContext('2d');
-    const recordBtn = document.getElementById('recordBtn'), stopBtn = document.getElementById('stopBtn'), status = document.getElementById('status'), timerBadge = document.getElementById('timerBadge'), resultLink = document.getElementById('resultLink');
+    const cloudName = 'wf1qutrj'; 
+    const uploadPreset = 'jr3hrfi9'; 
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let cameraStream;
+    let maxTime = 20;
+    let timeLeft = maxTime;
+    let timer;
+    let countdownInterval;
+
+    const preview = document.getElementById('preview');
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+    const timerBadge = document.getElementById('timerBadge');
+    const resultLink = document.getElementById('resultLink');
+
+    function getSupportedMimeType() {
+      const types = [
+        'video/mp4;codecs=avc1.640028',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+      ];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      }
+      return '';
+    }
 
     async function initCamera() {
       try {
+        // 3:4 (960x1280) 縦長でカメラを取得
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user", width: { ideal: 1024 }, height: { ideal: 768 }, frameRate: { ideal: 30 } }, 
+          video: { 
+            facingMode: "user",
+            width: { ideal: 960 },
+            height: { ideal: 1280 },
+            aspectRatio: { ideal: 0.75 }, // 3:4
+            frameRate: { ideal: 30 }
+          }, 
           audio: true 
         });
+
         preview.srcObject = cameraStream;
-      } catch (e) {
-        try { 
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); 
-          preview.srcObject = cameraStream; 
-        } catch (err) { 
-          status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; 
+      } catch (err) {
+        try {
+          // exact/idealの互換性用フォールバック (3:4)
+          cameraStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: "user",
+              aspectRatio: { ideal: 0.75 },
+              width: { ideal: 720 },
+              height: { ideal: 960 }
+            }, 
+            audio: true 
+          });
+          preview.srcObject = cameraStream;
+        } catch (e) {
+          status.innerText = 'カメラとマイクのアクセスを許可してください🙏';
+          status.style.color = 'red';
         }
       }
     }
+
     initCamera();
 
-    function drawFrame() {
-      if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
-        let vW = preview.videoWidth, vH = preview.videoHeight;
-        if (vW > 0 && vH > 0) {
-          let targetW = 1024;
-          let targetH = 768;
-          if (canvas.width !== targetW || canvas.height !== targetH) {
-            canvas.width = targetW;
-            canvas.height = targetH;
-          }
-          ctx.clearRect(0, 0, targetW, targetH);
-          ctx.save();
-          ctx.translate(targetW, 0);
-          ctx.scale(-1, 1);
-          
-          let sRatio = vW / vH;
-          let tRatio = targetW / targetH;
-          let sW, sH, sX, sY;
-          if (sRatio > tRatio) {
-            sH = vH; sW = vH * tRatio;
-            sX = (vW - sW) / 2; sY = 0;
-          } else {
-            sW = vW; sH = vW / tRatio;
-            sX = 0; sY = (vH - sH) / 2;
-          }
-          ctx.drawImage(preview, sX, sY, sW, sH, 0, 0, targetW, targetH);
-          ctx.restore();
-        }
-      }
-      animFrameId = requestAnimationFrame(drawFrame);
-    }
-
     recordBtn.addEventListener('click', () => {
-      recordedChunks = []; resultLink.style.display = 'none';
-      document.body.classList.add('recording-mode');
-      drawFrame();
-      const canvasStream = canvas.captureStream(30);
-      if (cameraStream.getAudioTracks().length > 0) canvasStream.addTrack(cameraStream.getAudioTracks()[0]);
-      
-      try { mediaRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 2000000 }); } 
-      catch (e) { mediaRecorder = new MediaRecorder(canvasStream); }
+      recordedChunks = [];
+      resultLink.style.display = 'none';
+      const mimeType = getSupportedMimeType();
 
-      mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        cancelAnimationFrame(animFrameId); clearInterval(countdownInterval); clearTimeout(timer); timerBadge.style.display = 'none';
-        document.body.classList.remove('recording-mode');
-        status.innerText = '送信中... ⏳'; recordBtn.style.display = 'none'; stopBtn.style.display = 'none';
-        
-        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
-        const formData = new FormData(); formData.append('file', blob); formData.append('upload_preset', uploadPreset);
-        try {
-          const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, { method: 'POST', body: formData });
-          const json = await res.json();
-          if (res.ok && json.secure_url) {
-            status.innerText = '送信完了！ありがとうございました🎉'; status.style.color = '#2ed573';
-            resultLink.href = json.secure_url; resultLink.style.display = 'block';
-          } else { throw new Error(json.error?.message || 'エラー'); }
-        } catch (err) {
-          status.innerText = `送信エラー: ${err.message}`; status.style.color = 'red'; recordBtn.style.display = 'inline-block';
+      const options = { videoBitsPerSecond: 4000000 };
+      if (mimeType) { options.mimeType = mimeType; }
+
+      mediaRecorder = new MediaRecorder(cameraStream, options);
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) {
+          recordedChunks.push(e.data);
         }
       };
 
-      mediaRecorder.start(250);
-      recordBtn.style.display = 'none'; stopBtn.style.display = 'inline-block';
-      let timeLeft = maxTime; timerBadge.innerText = `残り ${timeLeft}秒`; timerBadge.style.display = 'block';
-      countdownInterval = setInterval(() => { if (--timeLeft >= 0) timerBadge.innerText = `残り ${timeLeft}秒`; }, 1000);
-      timer = setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, maxTime * 1000);
+      mediaRecorder.onstop = async () => {
+        clearInterval(countdownInterval);
+        clearTimeout(timer);
+        timerBadge.style.display = 'none';
+
+        status.innerText = '送信中... ⏳';
+        status.style.color = '#333';
+        recordBtn.style.display = 'none';
+        stopBtn.style.display = 'none';
+
+        const actualType = mediaRecorder.mimeType || mimeType || 'video/webm';
+        const blob = new Blob(recordedChunks, { type: actualType });
+
+        const formData = new FormData();
+        formData.append('file', blob);
+        formData.append('upload_preset', uploadPreset);
+
+        try {
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+          if (response.ok && result.secure_url) {
+            status.innerText = '送信完了！ありがとうございました🎉';
+            status.style.color = '#2ed573';
+            
+            resultLink.href = result.secure_url;
+            resultLink.style.display = 'block';
+          } else {
+            console.error('Cloudinary Error:', result);
+            throw new Error(result.error ? result.error.message : '送信に失敗しました');
+          }
+        } catch (error) {
+          console.error(error);
+          status.innerText = '送信エラーが発生しました。設定を確認してください。';
+          status.style.color = 'red';
+        }
+      };
+
+      mediaRecorder.start(1000);
+      recordBtn.style.display = 'none';
+      stopBtn.style.display = 'inline-block';
+
+      timeLeft = maxTime;
+      timerBadge.innerText = `残り ${timeLeft}秒`;
+      timerBadge.style.display = 'block';
+      status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
+      status.style.color = '#ff4757';
+
+      countdownInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft >= 0) {
+          timerBadge.innerText = `残り ${timeLeft}秒`;
+          status.innerText = `🔴 録画中... (残り ${timeLeft}秒)`;
+        }
+      }, 1000);
+
+      timer = setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, maxTime * 1000);
     });
 
-    stopBtn.addEventListener('click', () => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); });
+    stopBtn.addEventListener('click', () => {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+    });
   </script>
 </body>
 </html>
