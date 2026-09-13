@@ -36,38 +36,39 @@
       justify-content: center;
       align-items: center;
       background: #fdfaf6;
-      padding: 15px;
+      padding: 10px;
     }
 
     h2 { 
       color: #d4af37; 
-      margin: 0 0 5px 0; 
-      font-size: 20px; 
+      margin: 0 0 4px 0; 
+      font-size: 18px; 
     }
     p { 
-      margin: 0 0 10px 0; 
-      font-size: 14px; 
+      margin: 0 0 8px 0; 
+      font-size: 13px; 
       color: #555;
     }
     
-    /* 初期状態（必要に応じて調整可能。デフォルトは 3/4） */
+    /* 初期状態のカメラ枠 */
     .video-container {
       width: 100%;
       max-width: 320px;
       aspect-ratio: 3 / 4;
-      max-height: calc(100vw - 120px);
+      max-height: calc(100vw - 110px);
       border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
       flex-shrink: 1;
-      transition: aspect-ratio 0.3s ease; /* 切り替え時のアニメーション */
+      transition: all 0.3s ease;
     }
 
-    /* 録画開始時に 9:16 へ調整するクラス */
-    .video-container.aspect-9-16 {
-      aspect-ratio: 9 / 16 !important;
+    /* 録画開始時に「超縦長（9:19.5）」に変更 */
+    .video-container.aspect-ultra-tall {
+      aspect-ratio: 9 / 19.5 !important; /* より細長いアスペクト比 */
+      max-height: calc(100vw - 70px) !important;
     }
     
     video {
@@ -94,13 +95,13 @@
     }
 
     .controls { 
-      margin-top: 10px; 
+      margin-top: 8px; 
       flex-shrink: 0;
     }
     
     button { 
-      padding: 12px 36px; 
-      font-size: 16px; 
+      padding: 10px 32px; 
+      font-size: 15px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -114,7 +115,7 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 8px; 
+      margin-top: 6px; 
       font-weight: bold; 
       font-size: 13px; 
       min-height: 18px; 
@@ -123,7 +124,7 @@
     
     #resultLink { 
       display: block; 
-      margin-top: 6px; 
+      margin-top: 4px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
@@ -200,7 +201,7 @@
           video: { 
             facingMode: "user",
             width: { ideal: 1080 },
-            height: { ideal: 1920 },
+            height: { ideal: 2340 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -229,9 +230,9 @@
         let vHeight = preview.videoHeight;
 
         if (vWidth > 0 && vHeight > 0) {
-          // 録画用キャンバスを 9:16（720x1280）に固定設定
-          let targetWidth = 720;
-          let targetHeight = 1280;
+          // 超縦長 9:19.5 (1080x2340) で動画をクロップ生成
+          let targetWidth = 1080;
+          let targetHeight = 2340;
 
           if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
             canvas.width = targetWidth;
@@ -243,7 +244,6 @@
           ctx.translate(targetWidth, 0);
           ctx.scale(-1, 1);
 
-          // 9:16の画角に合わせて中央をクロップして描画
           let vRatio = vWidth / vHeight;
           let tRatio = targetWidth / targetHeight;
           let sWidth, sHeight, sX, sY;
@@ -271,9 +271,9 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      // 撮影中の表示調整（案内文の非表示 ＆ カメラ枠を 9:16 に拡大・変更）
+      // 超縦長（9:19.5）クラスを追加
       screenRotator.classList.add('recording-mode');
-      videoContainer.classList.add('aspect-9-16');
+      videoContainer.classList.add('aspect-ultra-tall');
 
       drawFrame();
       const canvasStream = canvas.captureStream(30);
@@ -285,7 +285,7 @@
       recordStream = canvasStream;
 
       const mimeType = getSupportedMimeType();
-      const options = { videoBitsPerSecond: 2500000 };
+      const options = { videoBitsPerSecond: 3000000 };
       if (mimeType) { options.mimeType = mimeType; }
 
       try {
@@ -306,9 +306,8 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        // 送信処理中は案内文やステータスエリアを再表示（アスペクト比は元の比率に戻す）
         screenRotator.classList.remove('recording-mode');
-        videoContainer.classList.remove('aspect-9-16');
+        videoContainer.classList.remove('aspect-ultra-tall');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
