@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wedding Message Booth - 4:3</title>
+  <title>Wedding Message Booth - 16:9</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -29,8 +29,8 @@
     p { margin: 0; font-size: 13px; color: #555; }
     .video-container {
       width: 100%;
-      max-width: 380px;
-      aspect-ratio: 3 / 4; /* 横向き表示時に 4:3 になる縦横比 */
+      max-width: 420px;
+      aspect-ratio: 9 / 16; /* 横向き表示時に 16:9 になる縦横比 */
       border-radius: 16px; overflow: hidden;
       background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
@@ -82,7 +82,7 @@
 
     async function initCamera() {
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 }, frameRate: { ideal: 30 } }, audio: true });
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true });
         preview.srcObject = cameraStream;
       } catch (e) {
         try { cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); preview.srcObject = cameraStream; } catch (err) { status.innerText = 'カメラとマイクのアクセスを許可してください🙏'; }
@@ -94,9 +94,9 @@
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vW = preview.videoWidth, vH = preview.videoHeight;
         if (vW > 0 && vH > 0) {
-          // 4:3（横向き）の解像度に固定してキャンバスを作成（黒帯を発生させない）
+          // 16:9（横向き）の解像度に固定してキャンバスを作成（黒帯を発生させない）
           let targetWidth = 1280;
-          let targetHeight = 960;
+          let targetHeight = 720;
           if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
             canvas.width = targetWidth;
             canvas.height = targetHeight;
