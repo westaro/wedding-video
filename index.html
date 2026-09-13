@@ -24,33 +24,57 @@
       align-items: center;
     }
 
-    /* 画面強制回転を外し、通常のコンテナレイアウトに変更 */
+    /* スマホを横に構えた際に、文字やボタンを90度時計回りに回転させて横向きで読めるようにするコンテナ */
     .screen-rotator {
-      width: 100vw;
-      height: 100vh;
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      position: absolute;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
+      flex-direction: row;
+      justify-content: space-between;
       align-items: center;
       background: #fdfaf6;
-      padding: 15px;
+      padding: 20px;
+    }
+
+    /* 左側のエリア（録画ボタンなど） */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      min-width: 140px;
+    }
+
+    /* 右側のエリア（Happy Wedding! と案内文） */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 140px;
+      text-align: center;
     }
 
     h2 { 
       color: #d4af37; 
       margin: 0 0 5px 0; 
       font-size: 20px; 
+      writing-mode: horizontal-tb;
     }
     p { 
-      margin: 0 0 15px 0; 
+      margin: 0; 
       font-size: 14px; 
       color: #555;
     }
     
     .video-container {
       width: 100%;
-      max-width: 420px;
-      aspect-ratio: 4 / 3;
+      max-width: 330px;
+      aspect-ratio: 3 / 4;
       border-radius: 16px;
       overflow: hidden;
       background: #000;
@@ -82,12 +106,12 @@
     }
 
     .controls { 
-      margin-top: 15px; 
+      margin-top: 0; 
     }
     
     button { 
-      padding: 14px 40px; 
-      font-size: 18px; 
+      padding: 14px 30px; 
+      font-size: 16px; 
       border-radius: 30px; 
       border: none; 
       cursor: pointer; 
@@ -101,20 +125,20 @@
     #stopBtn { background: #2f3542; color: white; display: none; }
     
     #status { 
-      margin-top: 10px; 
+      margin-top: 5px; 
       font-weight: bold; 
-      font-size: 14px; 
+      font-size: 12px; 
       min-height: 20px; 
       word-break: break-all; 
     }
     
     #resultLink { 
       display: block; 
-      margin-top: 8px; 
+      margin-top: 5px; 
       color: #007bff; 
       text-decoration: underline; 
       font-weight: bold; 
-      font-size: 14px;
+      font-size: 12px;
     }
 
     /* 撮影中に文字や案内を隠すクラス */
@@ -125,23 +149,28 @@
 </head>
 <body>
   <div class="screen-rotator" id="screenRotator">
-    <div class="hide-during-rec">
-      <h2>Happy Wedding!</h2>
-      <p>📱 横向きで撮影してください</p>
+    <!-- 左側：録画ボタン・ステータス・リンク -->
+    <div class="left-panel">
+      <div class="controls">
+        <button id="recordBtn">録画開始</button>
+        <button id="stopBtn">録画ストップ</button>
+      </div>
+      <div id="status" class="hide-during-rec"></div>
+      <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
     </div>
-    
+
+    <!-- 中央：カメラプレビュー -->
     <div class="video-container">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
     </div>
-    
-    <div class="controls">
-      <button id="recordBtn">録画開始</button>
-      <button id="stopBtn">録画ストップ</button>
+
+    <!-- 右側：タイトルと横向き撮影の案内文 -->
+    <div class="right-panel hide-during-rec">
+      <h2>Happy Wedding!</h2>
+      <p>📱 横向きで撮影してください</p>
     </div>
-    <div id="status" class="hide-during-rec"></div>
-    <a id="resultLink" href="" target="_blank" style="display: none;" class="hide-during-rec">🎥 保存された動画を確認する</a>
   </div>
 
   <script>
@@ -185,8 +214,8 @@
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
+            width: { ideal: 960 },
+            height: { ideal: 1280 },
             frameRate: { ideal: 30 }
           }, 
           audio: true 
@@ -220,7 +249,6 @@
             canvas.height = vHeight;
           }
 
-          // スマホの向き（縦・横）に合わせて自然に映像を描画
           ctx.clearRect(0, 0, vWidth, vHeight);
           ctx.save();
           ctx.translate(vWidth, 0);
@@ -236,7 +264,6 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      // 撮影中は文字やタイトルを非表示にする
       screenRotator.classList.add('recording-mode');
 
       drawFrame();
@@ -270,7 +297,6 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        // 送信処理中は文字エリアを再表示してステータスを見せる
         screenRotator.classList.remove('recording-mode');
 
         status.innerText = '送信中... ⏳';
