@@ -9,26 +9,33 @@
       box-sizing: border-box;
     }
     
-    html, body { 
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
+    body { 
       font-family: 'Helvetica Neue', Arial, sans-serif; 
       text-align: center; 
       background: #fdfaf6; 
-      overflow: hidden;
-      touch-action: manipulation;
-    }
-
-    /* 回転指定を行わず、画面の向きにそのまま従う標準コンテナ */
-    .app-container {
+      margin: 0;
+      padding: 0;
       width: 100vw;
       height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 縦長のスマホ画面（ポートレート）のまま、90度回転させて「横向き表示」を強制するコンテナ */
+    .screen-rotator {
+      width: 100vh;
+      height: 100vw;
+      transform: rotate(90deg);
+      transform-origin: center center;
+      position: absolute;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      background: #fdfaf6;
       padding: 15px;
     }
 
@@ -43,24 +50,21 @@
       color: #555;
     }
     
-    /* カメラ枠：画面の向きに合わせてフィット */
+    /* カメラ枠を 16:9 に設定 */
     .video-container {
       width: 100%;
-      max-width: 480px;
-      max-height: 65vh;
-      aspect-ratio: 16 / 9;
+      max-width: 360px;
+      aspect-ratio: 16 / 9; /* 16:9に指定 */
+      max-height: calc(100vw - 120px);
       border-radius: 16px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       position: relative;
       flex-shrink: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      transition: all 0.3s ease;
     }
     
-    /* 余計な回転を一切しない標準のミラー表示 */
     video {
       width: 100%;
       height: 100%;
@@ -85,7 +89,7 @@
     }
 
     .controls { 
-      margin-top: 15px; 
+      margin-top: 12px; 
       flex-shrink: 0;
     }
     
@@ -121,20 +125,20 @@
       font-size: 13px;
     }
 
-    /* 録画中の非表示設定 */
+    /* 撮影中に文字や案内を隠すクラス */
     .recording-mode .hide-during-rec {
       display: none !important;
     }
   </style>
 </head>
 <body>
-  <div class="app-container" id="appContainer">
+  <div class="screen-rotator" id="screenRotator">
     <div class="hide-during-rec">
       <h2>Happy Wedding!</h2>
-      <p>メッセージをお寄せください🎉</p>
+      <p>📱 横向きで撮影してください</p>
     </div>
     
-    <div class="video-container">
+    <div class="video-container" id="videoContainer">
       <div id="timerBadge">残り 20秒</div>
       <video id="preview" autoplay muted playsinline></video>
       <canvas id="recordCanvas" style="display:none;"></canvas>
@@ -170,7 +174,8 @@
     const status = document.getElementById('status');
     const timerBadge = document.getElementById('timerBadge');
     const resultLink = document.getElementById('resultLink');
-    const appContainer = document.getElementById('appContainer');
+    const screenRotator = document.getElementById('screenRotator');
+    const videoContainer = document.getElementById('videoContainer');
 
     function getSupportedMimeType() {
       const types = [
@@ -186,14 +191,17 @@
 
     async function initCamera() {
       try {
+        // 16:9（1280x720）を推奨設定
         cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
             width: { ideal: 1280 },
-            height: { ideal: 720 }
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
           }, 
           audio: true 
         });
+
         preview.srcObject = cameraStream;
       } catch (err) {
         try {
@@ -211,26 +219,43 @@
 
     initCamera();
 
-    /* そのままの解像度で描写 */
     function drawFrame() {
       if (preview.readyState >= preview.HAVE_CURRENT_DATA) {
         let vWidth = preview.videoWidth;
         let vHeight = preview.videoHeight;
 
         if (vWidth > 0 && vHeight > 0) {
-          if (canvas.width !== vWidth || canvas.height !== vHeight) {
-            canvas.width = vWidth;
-            canvas.height = vHeight;
+          // 16:9（1280x720）で動画を保存
+          let targetWidth = 1280;
+          let targetHeight = 720;
+
+          if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
           }
 
-          ctx.clearRect(0, 0, vWidth, vHeight);
+          ctx.clearRect(0, 0, targetWidth, targetHeight);
           ctx.save();
-          
-          // インカメラ用の左右反転のみ
-          ctx.translate(vWidth, 0);
+          ctx.translate(targetWidth, 0);
           ctx.scale(-1, 1);
 
-          ctx.drawImage(preview, 0, 0, vWidth, vHeight);
+          let vRatio = vWidth / vHeight;
+          let tRatio = targetWidth / targetHeight;
+          let sWidth, sHeight, sX, sY;
+
+          if (vRatio > tRatio) {
+            sHeight = vHeight;
+            sWidth = vHeight * tRatio;
+            sX = (vWidth - sWidth) / 2;
+            sY = 0;
+          } else {
+            sWidth = vWidth;
+            sHeight = vWidth / tRatio;
+            sX = 0;
+            sY = (vHeight - sHeight) / 2;
+          }
+
+          ctx.drawImage(preview, sX, sY, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
           ctx.restore();
         }
       }
@@ -241,7 +266,7 @@
       recordedChunks = [];
       resultLink.style.display = 'none';
 
-      appContainer.classList.add('recording-mode');
+      screenRotator.classList.add('recording-mode');
 
       drawFrame();
       const canvasStream = canvas.captureStream(30);
@@ -274,7 +299,7 @@
         clearTimeout(timer);
         timerBadge.style.display = 'none';
 
-        appContainer.classList.remove('recording-mode');
+        screenRotator.classList.remove('recording-mode');
 
         status.innerText = '送信中... ⏳';
         status.style.color = '#333';
