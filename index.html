@@ -6,212 +6,225 @@
     <title>Wedding Message Booth</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* 画面全体は黒背景、スクロール禁止 */
         body { background-color: #000; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
 
-        /* カメラ映像 (背景に全画面表示・広角) */
-        #camera-video {
+        /* 映像取得用の元のビデオ（裏側で動かすため非表示） */
+        #camera-video { display: none; }
+
+        /* 
+         【重要】スマホを時計回りに90度倒した時に、UIが正立して見えるようにするコンテナ 
+         縦横のサイズ(vh, vw)を逆転させ、-90度回転させることで全画面の横長UIを作ります
+        */
+        #landscape-container {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100vh; height: 100vw;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            background: #111;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* プレビュー用キャンバス（録画データにもなる） */
+        #preview-canvas {
             position: absolute;
             top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            object-fit: cover; /* 画面いっぱいに広く表示 */
+            width: 100%; height: 100%;
+            object-fit: cover;
+            /* 自分が鏡のように見えるように左右反転（※保存される動画は反転しません） */
+            transform: scaleX(-1);
             z-index: 1;
         }
 
-        /* UIを重ねるレイヤー */
+        /* UIを乗せるレイヤー */
         #ui-layer {
             position: absolute;
             top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            width: 100%; height: 100%;
             z-index: 10;
-            pointer-events: none; /* ボタン以外のクリックを透過 */
-        }
-
-        /* 
-         【重要】スマホを時計回りに90度倒した時に読めるようにする設定。
-         縦持ちの時はUI全体を反時計回りに90度回転させておきます。
-        */
-        @media screen and (orientation: portrait) {
-            .rotate-ui {
-                transform: rotate(-90deg);
-                width: 100vh;
-                height: 100vw;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                margin-top: -50vw;
-                margin-left: -50vh;
-            }
-        }
-        /* ユーザーがスマホを横持ちにしたら回転を解除して全画面にフィット */
-        @media screen and (orientation: landscape) {
-            .rotate-ui {
-                width: 100vw;
-                height: 100vh;
-                position: absolute;
-                top: 0;
-                left: 0;
-            }
-        }
-
-        /* UIコンテナ共通 */
-        .ui-content {
+            pointer-events: none; /* ボタン以外のクリックを無効化 */
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            width: 100%; height: 100%;
-            pointer-events: auto; /* クリックを有効化 */
-            position: relative;
+            align-items: center;
         }
 
-        /* === 待機画面 === */
-        #ready-ui {
-            display: flex;
-        }
+        /* 待機画面のパネル */
+        #ready-ui { pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #ready-screen {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            padding: 30px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        #ready-screen h2 { color: #d4af37; font-size: 28px; margin-bottom: 15px; font-family: serif; }
+        #ready-screen h2 { color: #d4af37; font-size: 28px; margin-bottom: 15px; font-family: serif; margin-top: 0; }
         #ready-screen p { color: #333; font-size: 16px; margin-bottom: 25px; line-height: 1.5; font-weight: bold; }
-        .attention { color: #ef5350; }
+        .highlight { color: #ef5350; font-size: 18px;}
 
+        /* 録画開始ボタン */
         #start-btn {
-            background-color: #ef5350; color: white;
-            border: none; padding: 15px 40px; font-size: 22px; font-weight: bold;
-            border-radius: 30px; box-shadow: 0 5px 15px rgba(239, 83, 80, 0.4);
-            cursor: pointer;
+            background-color: #ef5350; color: white; border: none;
+            padding: 15px 40px; font-size: 22px; font-weight: bold;
+            border-radius: 30px; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(239, 83, 80, 0.4);
         }
 
-        /* === 録画中画面 === */
-        #recording-ui {
-            display: none; /* 初期は非表示 */
-        }
+        /* 録画中画面 */
+        #recording-ui { display: none; width: 100%; height: 100%; position: relative; pointer-events: none; }
         #countdown {
-            position: absolute;
-            top: 20px;
-            background: rgba(239, 83, 80, 0.9);
-            color: white;
-            padding: 10px 25px;
-            border-radius: 30px;
-            font-size: 24px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(239, 83, 80, 0.9); color: white;
+            padding: 10px 25px; border-radius: 30px; font-size: 24px; font-weight: bold;
         }
-        /* 録画停止ボタン (右端) */
+        
+        /* 録画停止ボタン (右端に配置) */
         #stop-btn {
-            position: absolute;
-            right: 30px;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: white;
-            color: #ef5350;
-            border: none;
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            font-size: 18px; font-weight: bold;
+            position: absolute; right: 30px; top: 50%; transform: translateY(-50%);
+            background-color: white; color: #ef5350; border: none;
+            width: 80px; height: 80px; border-radius: 50%;
+            font-size: 18px; font-weight: bold; cursor: pointer; pointer-events: auto;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: pointer;
         }
 
-        /* === ステータス画面 === */
+        /* ステータス画面 */
         #status-view {
-            display: none;
-            background: rgba(255,255,255,0.95);
-            z-index: 100;
+            display: none; background: rgba(255,255,255,0.95);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            justify-content: center; align-items: center; z-index: 100; pointer-events: auto;
         }
-        #status-text {
-            font-size: 22px; font-weight: bold; color: #333; text-align: center; line-height: 1.6;
-        }
+        #status-text { font-size: 22px; font-weight: bold; color: #333; text-align: center; line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <!-- カメラ映像 (プレビューと録画を兼用) -->
-    <video id="camera-video" autoplay muted playsinline></video>
+    <!-- 映像処理コンテナ -->
+    <div id="landscape-container">
+        <!-- 元映像取得用 (非表示) -->
+        <video id="camera-video" autoplay muted playsinline></video>
+        
+        <!-- 回転描画＆録画用キャンバス -->
+        <canvas id="preview-canvas"></canvas>
 
-    <!-- UIレイヤー -->
-    <div id="ui-layer">
-        <div class="rotate-ui">
+        <!-- UIレイヤー -->
+        <div id="ui-layer">
             
             <!-- 待機画面 -->
-            <div id="ready-ui" class="ui-content">
+            <div id="ready-ui">
                 <div id="ready-screen">
                     <h2>Happy Wedding!</h2>
-                    <!-- 映像が横倒しになるのを防ぐため、画面ロック解除を促します -->
-                    <p>綺麗に撮影するために<br>スマホの<span class="attention">「画面回転ロック」を解除</span>して<br>横向きに持ち替えてください</p>
+                    <p>スマホを<span class="highlight">「時計回り」</span>に<br>横へ倒して撮影してください</p>
                     <button id="start-btn">録画開始</button>
                 </div>
             </div>
 
             <!-- 録画中画面 -->
-            <div id="recording-ui" class="ui-content">
+            <div id="recording-ui">
                 <div id="countdown">残り 20 秒</div>
                 <button id="stop-btn">停止</button>
             </div>
 
-            <!-- ステータス画面 (アップロード中/完了) -->
-            <div id="status-view" class="ui-content">
+            <!-- アップロード中画面 -->
+            <div id="status-view">
                 <p id="status-text">準備中...</p>
             </div>
-
+            
         </div>
     </div>
 
     <script>
-        // --- 設定エリア ---
         const CLOUD_NAME = 'wf1qutrj'; 
-        const UPLOAD_PRESET = 'wedding_preset'; // ご自身で作成したプリセット名
-        const MAX_SECONDS = 20; // 20秒
+        const UPLOAD_PRESET = 'wedding_preset'; 
+        const MAX_SECONDS = 20;
 
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let originalStream;
         let mediaRecorder;
         let recordedChunks = [];
-        let stream;
         let timerInterval;
 
-        // ページ読み込み時にカメラを起動
+        // 1. カメラの起動
         window.onload = async () => {
             try {
-                // 広角で自然に映るようにアスペクト比の強制を解除しました
-                stream = await navigator.mediaDevices.getUserMedia({
+                originalStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user' },
                     audio: true
                 });
-                document.getElementById('camera-video').srcObject = stream;
+                video.srcObject = originalStream;
             } catch (err) {
                 alert('カメラとマイクのアクセスを許可してください。');
                 console.error(err);
             }
         };
 
-        // 録画開始ボタンの処理
-        document.getElementById('start-btn').addEventListener('click', () => {
-            if (!stream) return alert('カメラが準備できていません');
+        // 2. 映像データの読み込みが完了したらCanvasのサイズを設定して描画開始
+        video.addEventListener('loadedmetadata', () => {
+            // 元の映像(縦長)のサイズを取得
+            const vWidth = video.videoWidth;
+            const vHeight = video.videoHeight;
+            
+            // キャンバスは横長(16:9)にするため、縦横のサイズを入れ替えて設定
+            canvas.width = vHeight;
+            canvas.height = vWidth;
+            
+            // 描画ループ開始
+            drawToCanvas();
+        });
 
-            // UIの切り替え
+        // 3. 映像を90度回転させてCanvasにリアルタイム描画する処理
+        function drawToCanvas() {
+            if (video.paused || video.ended) return;
+
+            ctx.save();
+            // キャンバスの中心を基準にする
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            // 時計回りに90度回転
+            ctx.rotate(Math.PI / 2);
+            // 映像を描画 (中心を合わせて描画)
+            ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2, video.videoWidth, video.videoHeight);
+            ctx.restore();
+
+            // 次のフレームを描画
+            requestAnimationFrame(drawToCanvas);
+        }
+
+        // 4. 録画開始処理
+        document.getElementById('start-btn').addEventListener('click', () => {
+            if (!originalStream) return alert('カメラが準備できていません');
+
             document.getElementById('ready-ui').style.display = 'none';
-            document.getElementById('recording-ui').style.display = 'flex';
+            document.getElementById('recording-ui').style.display = 'block';
 
             recordedChunks = [];
+
+            // キャンバスから映像ストリームを取得 (30fps)
+            const canvasStream = canvas.captureStream(30);
             
+            // 元のストリームから音声トラックを取り出してキャンバスのストリームに結合
+            const audioTracks = originalStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                canvasStream.addTrack(audioTracks[0]);
+            }
+
             let options = { mimeType: 'video/mp4' };
             if (!MediaRecorder.isTypeSupported('video/mp4')) {
                 options = { mimeType: 'video/webm' };
             }
 
-            mediaRecorder = new MediaRecorder(stream, options);
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) recordedChunks.push(event.data);
+            // 回転済みのキャンバスストリームを録画する
+            mediaRecorder = new MediaRecorder(canvasStream, options);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
             };
-
             mediaRecorder.onstop = uploadToCloudinary;
             mediaRecorder.start();
 
-            // 20秒のカウントダウンと自動停止
+            // カウントダウン処理
             let timeLeft = MAX_SECONDS;
             document.getElementById('countdown').innerText = `残り ${timeLeft} 秒`;
             
@@ -226,15 +239,14 @@
             }, 1000);
         });
 
-        // 録画停止ボタンの処理
+        // 5. 録画停止ボタン
         document.getElementById('stop-btn').addEventListener('click', () => {
             clearInterval(timerInterval);
             if (mediaRecorder.state === 'recording') mediaRecorder.stop();
         });
 
-        // Cloudinaryへのアップロード処理
+        // 6. Cloudinaryへのアップロード処理
         async function uploadToCloudinary() {
-            // UIをアップロード中に切り替え
             document.getElementById('recording-ui').style.display = 'none';
             const statusView = document.getElementById('status-view');
             statusView.style.display = 'flex';
