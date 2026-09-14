@@ -10,10 +10,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background-color: #000; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; touch-action: none; }
 
-        /* 
-         【修正】カメラ映像の表示サイズを変更
-         全画面（100dvh）ではなく、上下のタブを避けた中央に配置されるよう調整
-        */
+        /* カメラ映像の表示コンテナ (タブを避けた中央配置) */
         #camera-video-container {
             position: absolute;
             top: 0; left: 0;
@@ -22,26 +19,22 @@
             justify-content: center;
             align-items: center;
             z-index: 1;
-            background-color: #000; /* 余白は黒で塗りつぶす */
+            background-color: #000;
         }
         #camera-video {
-            /* 
-             縦持ち(Portrait)時は縦に、横持ち(Landscape)時は横に、
-             常に9:16の比率を保ちながら画面内に収まるように最大サイズを指定
-            */
+            /* 9:16の比率を保ちつつ、タブバーに被らない最大サイズに調整 */
             max-width: 100%;
-            max-height: 75dvh; /* 上下のタブ(約25%)を避けるため高さを75%に制限 */
+            max-height: 75dvh; 
             aspect-ratio: 9 / 16;
             object-fit: cover;
-            border-radius: 10px; /* 少し角を丸くして自然に見せる */
+            border-radius: 10px;
         }
 
-        /* ユーザーがスマホを横持ち(Landscape)にした時、映像の縦横比を16:9に変更して画面にフィットさせる */
         @media screen and (orientation: landscape) {
             #camera-video {
                 aspect-ratio: 16 / 9;
                 max-height: 100%;
-                max-width: 75dvw; /* 左右の安全領域を確保 */
+                max-width: 75dvw;
             }
         }
 
@@ -172,7 +165,7 @@
 </head>
 <body>
 
-    <!-- 映像を中央に配置するためのコンテナを追加 -->
+    <!-- 映像コンテナ -->
     <div id="camera-video-container">
         <video id="camera-video" autoplay muted playsinline></video>
     </div>
@@ -215,8 +208,10 @@
     </div>
 
     <script>
+        // === Cloudinary 設定 ===
         const CLOUD_NAME = 'wf1qutrj'; 
-        const UPLOAD_PRESET = 'wedding_preset';
+        // 取得いただいた Unsigned Preset 名に変更しました
+        const UPLOAD_PRESET = 'jr3hrfi9';
         const MAX_SECONDS = 20;
 
         let mediaRecorder;
@@ -237,6 +232,7 @@
             }
         };
 
+        // チェックボックス処理
         document.getElementById('rotation-check').addEventListener('change', (e) => {
             const btn = document.getElementById('next-btn');
             if (e.target.checked) {
@@ -248,8 +244,8 @@
             }
         });
 
+        // 次へ進むボタン処理
         document.getElementById('next-btn').addEventListener('click', () => {
-            // Android向け全画面化処理 (iPhone Safariでは無視されます)
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
                 elem.requestFullscreen().catch(e => console.log(e));
@@ -261,6 +257,7 @@
             document.getElementById('ready-ui').style.display = 'flex';
         });
 
+        // 録画開始処理
         document.getElementById('start-btn').addEventListener('click', () => {
             if (!stream) return alert('カメラが準備できていません');
 
@@ -297,11 +294,13 @@
             }, 1000);
         });
 
+        // 停止ボタン処理
         document.getElementById('stop-btn').addEventListener('click', () => {
             clearInterval(timerInterval);
             if (mediaRecorder.state === 'recording') mediaRecorder.stop();
         });
 
+        // Cloudinaryへアップロード
         async function uploadToCloudinary() {
             document.getElementById('recording-ui').style.display = 'none';
             const statusView = document.getElementById('status-view');
@@ -323,7 +322,7 @@
                 if (data.secure_url) {
                     document.getElementById('status-text').innerHTML = '✨ 撮影完了！ ✨<br>メッセージありがとうございました。<br><br><span style="font-size:16px; color:#666;">画面を閉じて終了してください</span>';
                 } else {
-                    throw new Error('Upload failed');
+                    throw new Error('Upload failed: ' + (data.error ? data.error.message : 'Unknown error'));
                 }
             } catch (err) {
                 console.error(err);
