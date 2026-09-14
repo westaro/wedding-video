@@ -165,13 +165,11 @@
 </head>
 <body>
 
-    <!-- 映像コンテナ -->
     <div id="camera-video-container">
         <video id="camera-video" autoplay muted playsinline></video>
     </div>
 
     <div id="ui-layer">
-        <!-- 1. 事前確認画面 -->
         <div id="check-ui">
             <div id="check-screen">
                 <h2>事前準備のお願い</h2>
@@ -185,7 +183,6 @@
         </div>
 
         <div class="rotate-ui">
-            <!-- 2. 待機画面 -->
             <div id="ready-ui" class="ui-content">
                 <div id="ready-screen">
                     <h2>Happy Wedding!</h2>
@@ -194,13 +191,11 @@
                 </div>
             </div>
 
-            <!-- 3. 録画中画面 -->
             <div id="recording-ui" class="ui-content">
                 <div id="countdown">残り 20 秒</div>
                 <button id="stop-btn">停止</button>
             </div>
 
-            <!-- 4. ステータス画面 -->
             <div id="status-view" class="ui-content">
                 <p id="status-text">準備中...</p>
             </div>
@@ -208,7 +203,6 @@
     </div>
 
     <script>
-        // === Cloudinary 設定 ===
         const CLOUD_NAME = 'wf1qutrj'; 
         const UPLOAD_PRESET = 'jr3hrfi9';
         const MAX_SECONDS = 20;
@@ -220,17 +214,15 @@
 
         window.onload = async () => {
             try {
-                // 【修正】カメラの取得時に、録画データ自体を16:9(9:16)にするようにブラウザに要求します
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { 
                         facingMode: 'user',
-                        aspectRatio: { exact: 16/9 } // 録画データの比率を強制
+                        aspectRatio: { exact: 16/9 }
                     },
                     audio: true
                 });
                 document.getElementById('camera-video').srcObject = stream;
             } catch (err) {
-                // 万が一 16:9 に対応していない古いスマホの場合は、デフォルト比率で再試行します
                 console.warn('16:9 aspect ratio not supported, falling back to default.');
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({
@@ -245,7 +237,6 @@
             }
         };
 
-        // チェックボックス処理
         document.getElementById('rotation-check').addEventListener('change', (e) => {
             const btn = document.getElementById('next-btn');
             if (e.target.checked) {
@@ -257,7 +248,6 @@
             }
         });
 
-        // 次へ進むボタン処理
         document.getElementById('next-btn').addEventListener('click', () => {
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
@@ -270,7 +260,6 @@
             document.getElementById('ready-ui').style.display = 'flex';
         });
 
-        // 録画開始処理
         document.getElementById('start-btn').addEventListener('click', () => {
             if (!stream) return alert('カメラが準備できていません');
 
@@ -291,7 +280,9 @@
             };
 
             mediaRecorder.onstop = uploadToCloudinary;
-            mediaRecorder.start();
+            
+            // 【重要な修正】メモリパンクによる映像フリーズを防ぐため、1000ms(1秒)ごとにデータを区切って保存します
+            mediaRecorder.start(1000);
 
             let timeLeft = MAX_SECONDS;
             document.getElementById('countdown').innerText = `残り ${timeLeft} 秒`;
@@ -307,13 +298,11 @@
             }, 1000);
         });
 
-        // 停止ボタン処理
         document.getElementById('stop-btn').addEventListener('click', () => {
             clearInterval(timerInterval);
             if (mediaRecorder.state === 'recording') mediaRecorder.stop();
         });
 
-        // Cloudinaryへアップロード
         async function uploadToCloudinary() {
             document.getElementById('recording-ui').style.display = 'none';
             const statusView = document.getElementById('status-view');
