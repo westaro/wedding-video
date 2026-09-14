@@ -210,7 +210,6 @@
     <script>
         // === Cloudinary 設定 ===
         const CLOUD_NAME = 'wf1qutrj'; 
-        // 取得いただいた Unsigned Preset 名に変更しました
         const UPLOAD_PRESET = 'jr3hrfi9';
         const MAX_SECONDS = 20;
 
@@ -221,14 +220,28 @@
 
         window.onload = async () => {
             try {
+                // 【修正】カメラの取得時に、録画データ自体を16:9(9:16)にするようにブラウザに要求します
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user' },
+                    video: { 
+                        facingMode: 'user',
+                        aspectRatio: { exact: 16/9 } // 録画データの比率を強制
+                    },
                     audio: true
                 });
                 document.getElementById('camera-video').srcObject = stream;
             } catch (err) {
-                alert('カメラとマイクのアクセスを許可してください。');
-                console.error(err);
+                // 万が一 16:9 に対応していない古いスマホの場合は、デフォルト比率で再試行します
+                console.warn('16:9 aspect ratio not supported, falling back to default.');
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'user' },
+                        audio: true
+                    });
+                    document.getElementById('camera-video').srcObject = stream;
+                } catch (fallbackErr) {
+                    alert('カメラとマイクのアクセスを許可してください。');
+                    console.error(fallbackErr);
+                }
             }
         };
 
